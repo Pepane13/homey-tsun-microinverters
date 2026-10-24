@@ -1,0 +1,42 @@
+{
+  "1.4.1": {
+    "en": "Fewer false communication warnings: collisions on the logger–inverter link (corrupted answer, no answer) are retried within the read; an isolated failed read is no longer a warning; slow answers with a fast connection are attributed to a busy logger, not to Wi-Fi.",
+    "fr": "Moins de faux avertissements de communication : les collisions sur la liaison logger–onduleur (réponse corrompue, absence de réponse) sont réessayées pendant la lecture ; un échec de lecture isolé n'est plus un avertissement ; une réponse lente avec une connexion rapide est attribuée au logger occupé, pas au Wi-Fi."
+  },
+  "1.4.0": {
+    "en": "Adaptive panel monitoring: each panel is compared with its own usual production at that time of day, learned automatically, so recurring shadows no longer raise alerts. Daily degradation check, learned profile table and reset in the app settings.",
+    "fr": "Surveillance adaptative des panneaux : chaque panneau est comparé à sa propre production habituelle à cette heure, apprise automatiquement ; les ombrages récurrents ne déclenchent plus d'alerte. Contrôle de dégradation journalier, tableau du profil appris et réinitialisation dans les réglages de l'app."
+  },
+  "1.3.2": {
+    "en": "Today's statistics (reads, response time, drops, peak, wake-up and standby times) are kept across app updates and Homey restarts, so the daily summary covers the whole day.",
+    "fr": "Les statistiques du jour (lectures, temps de réponse, coupures, pic, heures de réveil et de veille) sont conservées lors des mises à jour de l'app et des redémarrages du Homey : le bilan quotidien couvre toute la journée."
+  },
+  "1.3.1": {
+    "en": "Diagnostic report export from the app settings (download or copy): versions, settings with masked serial numbers, state and values of each inverter, daily statistics and the whole log.",
+    "fr": "Export d'un rapport de diagnostic depuis les réglages de l'app (téléchargement ou copie) : versions, réglages avec numéros de série masqués, état et valeurs de chaque onduleur, statistiques du jour et journal complet."
+  },
+  "1.3.0": {
+    "en": "Diagnostics: log viewer in the app settings (communication, panels, grid, inverter, daily summary), Wi-Fi analysis with probable cause, logger response time and communication success charts, alerts and Flow cards for communication loss, panels not producing, grid voltage, temperature and inverter alarms.",
+    "fr": "Diagnostic : journal consultable dans les réglages de l'app (communication, panneaux, réseau, onduleur, bilan quotidien), analyse Wi-Fi avec cause probable, courbes du temps de réponse du logger et du taux de réussite, alertes et cartes Flow pour perte de communication, panneau qui ne produit pas, tension réseau, température et alarmes onduleur."
+  },
+  "1.2.2": {
+    "en": "Removed the duplicate total yield chart (the total yield already has its own chart).",
+    "fr": "Suppression du doublon de courbe de production totale (la production totale a déjà sa courbe)."
+  },
+  "1.2.1": {
+    "en": "All measurements now available as Insights charts (AC power, yields, grid voltage, current and frequency, inverter temperature). The inverter temperature no longer affects the zone temperature.",
+    "fr": "Toutes les mesures disponibles en courbes Insights (puissance AC, productions, tension, courant et fréquence réseau, température onduleur). La température de l'onduleur ne fausse plus la température de la pièce."
+  },
+  "1.2.0": {
+    "en": "Ready for publication: English interface, empty connection settings by default, store description.",
+    "fr": "Prête pour la publication : interface en anglais, réglages de connexion vides par défaut, description du store."
+  },
+  "1.1.0": {
+    "en": "Homey Energy integration as solar panel, daily yield per panel, underperforming panel Flow cards, detailed inverter status.",
+    "fr": "Intégration à Homey Énergie comme panneau solaire, production du jour par panneau, cartes Flow « panneau sous-performant », statut détaillé de l'onduleur."
+  },
+  "1.0.0": {
+    "en": "First version.",
+    "fr": "Première version."
+  }
+}

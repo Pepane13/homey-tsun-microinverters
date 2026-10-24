@@ -1,0 +1,989 @@
+{
+  "id": "com.pepane13.tsun",
+  "version": "1.4.1",
+  "compatibility": ">=12.2.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "TSUN Micro-inverters",
+    "fr": "TSUN Micro-inverters"
+  },
+  "description": {
+    "en": "Monitor your TSUN micro-inverter locally, without the cloud",
+    "fr": "Suivez votre micro-onduleur TSUN en local, sans cloud"
+  },
+  "category": [
+    "energy"
+  ],
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Stéphane Renaudet",
+    "email": "stephane.renaudet@gmail.com"
+  },
+  "brandColor": "#F28C28",
+  "drivers": [
+    {
+      "id": "mx3000d",
+      "name": {
+        "en": "TSUN MX3000D",
+        "fr": "TSUN MX3000D"
+      },
+      "class": "solarpanel",
+      "capabilities": [
+        "measure_power",
+        "meter_power",
+        "tsun_energy.today",
+        "tsun_status",
+        "tsun_power.ac",
+        "tsun_voltage.grid",
+        "tsun_current.grid",
+        "tsun_frequency.grid",
+        "tsun_temperature.inverter",
+        "alarm_generic",
+        "tsun_latency.logger",
+        "tsun_ratio.comm",
+        "tsun_panel_power.pv1",
+        "tsun_panel_power.pv2",
+        "tsun_panel_power.pv3",
+        "tsun_panel_power.pv4",
+        "tsun_panel_power.pv5",
+        "tsun_panel_power.pv6",
+        "tsun_panel_energy.pv1",
+        "tsun_panel_energy.pv2",
+        "tsun_panel_energy.pv3",
+        "tsun_panel_energy.pv4",
+        "tsun_panel_energy.pv5",
+        "tsun_panel_energy.pv6"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Production",
+            "fr": "Production"
+          }
+        },
+        "meter_power": {
+          "title": {
+            "en": "Total yield",
+            "fr": "Production totale"
+          },
+          "decimals": 2
+        },
+        "alarm_generic": {
+          "title": {
+            "en": "Inverter alarm",
+            "fr": "Alarme onduleur"
+          }
+        },
+        "tsun_panel_power.pv1": {
+          "title": {
+            "en": "Panel 1",
+            "fr": "Panneau 1"
+          }
+        },
+        "tsun_panel_energy.pv1": {
+          "title": {
+            "en": "Panel 1 today",
+            "fr": "Panneau 1 jour"
+          }
+        },
+        "tsun_panel_power.pv2": {
+          "title": {
+            "en": "Panel 2",
+            "fr": "Panneau 2"
+          }
+        },
+        "tsun_panel_energy.pv2": {
+          "title": {
+            "en": "Panel 2 today",
+            "fr": "Panneau 2 jour"
+          }
+        },
+        "tsun_panel_power.pv3": {
+          "title": {
+            "en": "Panel 3",
+            "fr": "Panneau 3"
+          }
+        },
+        "tsun_panel_energy.pv3": {
+          "title": {
+            "en": "Panel 3 today",
+            "fr": "Panneau 3 jour"
+          }
+        },
+        "tsun_panel_power.pv4": {
+          "title": {
+            "en": "Panel 4",
+            "fr": "Panneau 4"
+          }
+        },
+        "tsun_panel_energy.pv4": {
+          "title": {
+            "en": "Panel 4 today",
+            "fr": "Panneau 4 jour"
+          }
+        },
+        "tsun_panel_power.pv5": {
+          "title": {
+            "en": "Panel 5",
+            "fr": "Panneau 5"
+          }
+        },
+        "tsun_panel_energy.pv5": {
+          "title": {
+            "en": "Panel 5 today",
+            "fr": "Panneau 5 jour"
+          }
+        },
+        "tsun_panel_power.pv6": {
+          "title": {
+            "en": "Panel 6",
+            "fr": "Panneau 6"
+          }
+        },
+        "tsun_panel_energy.pv6": {
+          "title": {
+            "en": "Panel 6 today",
+            "fr": "Panneau 6 jour"
+          }
+        },
+        "tsun_energy.today": {
+          "title": {
+            "en": "Yield today",
+            "fr": "Production du jour"
+          }
+        },
+        "tsun_power.ac": {
+          "title": {
+            "en": "AC power (chart)",
+            "fr": "Puissance AC (courbe)"
+          }
+        },
+        "tsun_voltage.grid": {
+          "title": {
+            "en": "Grid voltage",
+            "fr": "Tension réseau"
+          }
+        },
+        "tsun_current.grid": {
+          "title": {
+            "en": "Grid current",
+            "fr": "Courant réseau"
+          }
+        },
+        "tsun_frequency.grid": {
+          "title": {
+            "en": "Grid frequency",
+            "fr": "Fréquence réseau"
+          }
+        },
+        "tsun_temperature.inverter": {
+          "title": {
+            "en": "Inverter temperature",
+            "fr": "Température onduleur"
+          }
+        },
+        "tsun_latency.logger": {
+          "title": {
+            "en": "Logger response time (Wi-Fi)",
+            "fr": "Temps de réponse logger (Wi-Fi)"
+          }
+        },
+        "tsun_ratio.comm": {
+          "title": {
+            "en": "Communication success (1 h)",
+            "fr": "Réussite communication (1 h)"
+          }
+        }
+      },
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "images": {
+        "small": "/drivers/mx3000d/assets/images/small.png",
+        "large": "/drivers/mx3000d/assets/images/large.png",
+        "xlarge": "/drivers/mx3000d/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "configure"
+        }
+      ],
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Connection",
+            "fr": "Connexion"
+          },
+          "children": [
+            {
+              "id": "host",
+              "type": "text",
+              "label": {
+                "en": "Logger IP address",
+                "fr": "Adresse IP du logger"
+              },
+              "value": ""
+            },
+            {
+              "id": "logger_sn",
+              "type": "text",
+              "label": {
+                "en": "Logger serial number",
+                "fr": "Numéro de série du logger"
+              },
+              "hint": {
+                "en": "10-digit 'Device serial number' on the logger's label or web page (not the inverter serial number).",
+                "fr": "« Device serial number » à 10 chiffres, sur l'étiquette ou la page web du logger (pas le numéro de l'onduleur)."
+              },
+              "value": ""
+            },
+            {
+              "id": "poll_interval",
+              "type": "number",
+              "label": {
+                "en": "Polling interval",
+                "fr": "Intervalle d'interrogation"
+              },
+              "value": 30,
+              "min": 10,
+              "max": 600,
+              "units": {
+                "en": "s",
+                "fr": "s"
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Panel monitoring",
+            "fr": "Surveillance des panneaux"
+          },
+          "children": [
+            {
+              "id": "underperf_mode",
+              "type": "dropdown",
+              "label": {
+                "en": "Detection mode",
+                "fr": "Mode de détection"
+              },
+              "hint": {
+                "en": "Adaptive: each panel is compared with its own usual production at that time of day (learned automatically, so recurring shadows are not reported; alerts start once a time slot has been learned on 3 days). Simple: each panel is compared with the average of the others.",
+                "fr": "Adaptatif : chaque panneau est comparé à sa propre production habituelle à cette heure (apprise automatiquement, les ombrages récurrents ne sont donc pas signalés ; alertes dès qu'une tranche horaire est apprise sur 3 jours). Simple : chaque panneau est comparé à la moyenne des autres."
+              },
+              "value": "adaptive",
+              "values": [
+                {
+                  "id": "adaptive",
+                  "label": {
+                    "en": "Adaptive (learned)",
+                    "fr": "Adaptatif (appris)"
+                  }
+                },
+                {
+                  "id": "simple",
+                  "label": {
+                    "en": "Simple (average of the others)",
+                    "fr": "Simple (moyenne des autres)"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "underperf_threshold",
+              "type": "number",
+              "label": {
+                "en": "Underperformance threshold",
+                "fr": "Seuil de sous-performance"
+              },
+              "hint": {
+                "en": "A panel is underperforming when it produces this much less than expected: its usual production at that time (adaptive mode) or the average of the others (simple mode).",
+                "fr": "Un panneau est sous-performant quand il produit ce pourcentage de moins que prévu : sa production habituelle à cette heure (mode adaptatif) ou la moyenne des autres (mode simple)."
+              },
+              "value": 15,
+              "min": 5,
+              "max": 60,
+              "units": {
+                "en": "%",
+                "fr": "%"
+              }
+            },
+            {
+              "id": "underperf_delay",
+              "type": "number",
+              "label": {
+                "en": "Minimum duration",
+                "fr": "Durée minimale"
+              },
+              "hint": {
+                "en": "The gap must last this long before the Flow is triggered (filters passing shadows).",
+                "fr": "L'écart doit durer ce temps avant de déclencher le Flow (filtre les ombres passagères)."
+              },
+              "value": 15,
+              "min": 1,
+              "max": 240,
+              "units": {
+                "en": "min",
+                "fr": "min"
+              }
+            },
+            {
+              "id": "underperf_min_power",
+              "type": "number",
+              "label": {
+                "en": "Minimum average power",
+                "fr": "Puissance moyenne minimale"
+              },
+              "hint": {
+                "en": "No check below this average panel power (dawn, dusk, heavy clouds).",
+                "fr": "Pas de contrôle sous cette puissance moyenne par panneau (aube, crépuscule, ciel très couvert)."
+              },
+              "value": 80,
+              "min": 10,
+              "max": 400,
+              "units": {
+                "en": "W",
+                "fr": "W"
+              }
+            },
+            {
+              "id": "daily_threshold",
+              "type": "number",
+              "label": {
+                "en": "Daily degradation threshold",
+                "fr": "Seuil de dégradation journalière"
+              },
+              "hint": {
+                "en": "Adaptive mode: at midnight, a panel whose share of the daily yield is this much below its usual share is reported (dirt, new shadow, ageing). Starts after 7 learned days.",
+                "fr": "Mode adaptatif : à minuit, un panneau dont la part de la production du jour est inférieure de ce pourcentage à sa part habituelle est signalé (encrassement, nouvel ombrage, vieillissement). Actif après 7 jours d'apprentissage."
+              },
+              "value": 10,
+              "min": 3,
+              "max": 50,
+              "units": {
+                "en": "%",
+                "fr": "%"
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Advanced",
+            "fr": "Avancé"
+          },
+          "children": [
+            {
+              "id": "temp_offset",
+              "type": "number",
+              "label": {
+                "en": "Temperature offset",
+                "fr": "Décalage de température"
+              },
+              "hint": {
+                "en": "Value subtracted from the raw temperature register (40 per TSUN documentation).",
+                "fr": "Valeur soustraite au registre brut de température (40 selon la table TSUN)."
+              },
+              "value": 40,
+              "min": 0,
+              "max": 100
+            },
+            {
+              "id": "inverter_sn",
+              "type": "label",
+              "label": {
+                "en": "Inverter serial number",
+                "fr": "Numéro de série onduleur"
+              },
+              "value": ""
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Diagnostics and alerts",
+            "fr": "Diagnostic et alertes"
+          },
+          "children": [
+            {
+              "id": "comm_alert_delay",
+              "type": "number",
+              "label": {
+                "en": "Communication loss alert after",
+                "fr": "Alerte perte de communication après"
+              },
+              "hint": {
+                "en": "Alert when the inverter stays unreachable this long while it was producing (night standby is ignored).",
+                "fr": "Alerte si l'onduleur reste injoignable ce temps alors qu'il produisait (la veille de nuit est ignorée)."
+              },
+              "value": 10,
+              "min": 1,
+              "max": 180,
+              "units": {
+                "en": "min",
+                "fr": "min"
+              }
+            },
+            {
+              "id": "voltage_max",
+              "type": "number",
+              "label": {
+                "en": "Maximum grid voltage",
+                "fr": "Tension réseau maximale"
+              },
+              "hint": {
+                "en": "Above this value a warning is logged (EN 50160: 253 V). Overvoltage makes inverters disconnect.",
+                "fr": "Au-delà, un avertissement est journalisé (EN 50160 : 253 V). La surtension provoque des décrochages de l'onduleur."
+              },
+              "value": 253,
+              "min": 230,
+              "max": 270,
+              "units": {
+                "en": "V",
+                "fr": "V"
+              }
+            },
+            {
+              "id": "voltage_min",
+              "type": "number",
+              "label": {
+                "en": "Minimum grid voltage",
+                "fr": "Tension réseau minimale"
+              },
+              "value": 207,
+              "min": 180,
+              "max": 230,
+              "units": {
+                "en": "V",
+                "fr": "V"
+              }
+            },
+            {
+              "id": "temp_alert",
+              "type": "number",
+              "label": {
+                "en": "Inverter temperature alert",
+                "fr": "Alerte température onduleur"
+              },
+              "value": 80,
+              "min": 50,
+              "max": 100,
+              "units": {
+                "en": "°C",
+                "fr": "°C"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "tsun_panel_power": {
+      "type": "number",
+      "title": {
+        "en": "Panel power",
+        "fr": "Puissance panneau"
+      },
+      "units": {
+        "en": "W",
+        "fr": "W"
+      },
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "chartType": "spline",
+      "icon": "/assets/capabilities/power.svg"
+    },
+    "tsun_panel_energy": {
+      "type": "number",
+      "title": {
+        "en": "Panel yield today",
+        "fr": "Production panneau du jour"
+      },
+      "units": {
+        "en": "kWh",
+        "fr": "kWh"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "chartType": "stepLine",
+      "icon": "/assets/capabilities/energy.svg"
+    },
+    "tsun_status": {
+      "type": "string",
+      "title": {
+        "en": "Inverter status",
+        "fr": "Statut onduleur"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/capabilities/status.svg"
+    },
+    "tsun_power": {
+      "type": "number",
+      "title": {
+        "en": "Power",
+        "fr": "Puissance"
+      },
+      "units": {
+        "en": "W",
+        "fr": "W"
+      },
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "chartType": "spline",
+      "icon": "/assets/capabilities/power.svg"
+    },
+    "tsun_energy": {
+      "type": "number",
+      "title": {
+        "en": "Energy",
+        "fr": "Énergie"
+      },
+      "units": {
+        "en": "kWh",
+        "fr": "kWh"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "chartType": "stepLine",
+      "icon": "/assets/capabilities/energy.svg"
+    },
+    "tsun_voltage": {
+      "type": "number",
+      "title": {
+        "en": "Voltage",
+        "fr": "Tension"
+      },
+      "units": {
+        "en": "V",
+        "fr": "V"
+      },
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "chartType": "spline",
+      "icon": "/assets/capabilities/energy.svg"
+    },
+    "tsun_current": {
+      "type": "number",
+      "title": {
+        "en": "Current",
+        "fr": "Courant"
+      },
+      "units": {
+        "en": "A",
+        "fr": "A"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "chartType": "spline",
+      "icon": "/assets/capabilities/energy.svg"
+    },
+    "tsun_frequency": {
+      "type": "number",
+      "title": {
+        "en": "Frequency",
+        "fr": "Fréquence"
+      },
+      "units": {
+        "en": "Hz",
+        "fr": "Hz"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "chartType": "spline",
+      "icon": "/assets/capabilities/status.svg"
+    },
+    "tsun_temperature": {
+      "type": "number",
+      "title": {
+        "en": "Temperature",
+        "fr": "Température"
+      },
+      "units": {
+        "en": "°C",
+        "fr": "°C"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "chartType": "spline",
+      "icon": "/assets/capabilities/status.svg"
+    },
+    "tsun_latency": {
+      "type": "number",
+      "title": {
+        "en": "Latency",
+        "fr": "Latence"
+      },
+      "units": {
+        "en": "ms",
+        "fr": "ms"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "chartType": "spline",
+      "icon": "/assets/capabilities/status.svg"
+    },
+    "tsun_ratio": {
+      "type": "number",
+      "title": {
+        "en": "Ratio",
+        "fr": "Taux"
+      },
+      "units": {
+        "en": "%",
+        "fr": "%"
+      },
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "chartType": "spline",
+      "icon": "/assets/capabilities/status.svg"
+    }
+  },
+  "flow": {
+    "triggers": [
+      {
+        "id": "panel_underperforming",
+        "title": {
+          "en": "A panel is underperforming",
+          "fr": "Un panneau est sous-performant"
+        },
+        "hint": {
+          "en": "Triggered once per episode, after the minimum duration. In adaptive mode the deviation is measured against the panel's usual production at that time.",
+          "fr": "Déclenché une fois par épisode, après la durée minimale. En mode adaptatif, l'écart est mesuré par rapport à la production habituelle du panneau à cette heure."
+        },
+        "tokens": [
+          {
+            "name": "panel",
+            "type": "number",
+            "title": {
+              "en": "Panel",
+              "fr": "Panneau"
+            },
+            "example": 3
+          },
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "Panel power (W)",
+              "fr": "Puissance du panneau (W)"
+            },
+            "example": 250
+          },
+          {
+            "name": "expected",
+            "type": "number",
+            "title": {
+              "en": "Expected power (W)",
+              "fr": "Puissance attendue (W)"
+            },
+            "example": 300
+          },
+          {
+            "name": "average",
+            "type": "number",
+            "title": {
+              "en": "Others average (W)",
+              "fr": "Moyenne des autres (W)"
+            },
+            "example": 350
+          },
+          {
+            "name": "deviation",
+            "type": "number",
+            "title": {
+              "en": "Deviation (%)",
+              "fr": "Écart (%)"
+            },
+            "example": -28.6
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mx3000d"
+          }
+        ]
+      },
+      {
+        "id": "panel_recovered",
+        "title": {
+          "en": "A panel is back to normal",
+          "fr": "Un panneau est revenu à la normale"
+        },
+        "tokens": [
+          {
+            "name": "panel",
+            "type": "number",
+            "title": {
+              "en": "Panel",
+              "fr": "Panneau"
+            },
+            "example": 3
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mx3000d"
+          }
+        ]
+      },
+      {
+        "id": "status_changed",
+        "title": {
+          "en": "The inverter status changed",
+          "fr": "Le statut de l'onduleur a changé"
+        },
+        "tokens": [
+          {
+            "name": "status",
+            "type": "string",
+            "title": {
+              "en": "Status",
+              "fr": "Statut"
+            },
+            "example": "Normal"
+          },
+          {
+            "name": "code",
+            "type": "number",
+            "title": {
+              "en": "Status code",
+              "fr": "Code statut"
+            },
+            "example": 1
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mx3000d"
+          }
+        ]
+      },
+      {
+        "id": "panel_not_producing",
+        "title": {
+          "en": "A panel is not producing",
+          "fr": "Un panneau ne produit pas"
+        },
+        "hint": {
+          "en": "The panel stays below 5 % of the others for the minimum duration set in the device settings.",
+          "fr": "Le panneau reste sous 5 % des autres pendant la durée minimale réglée dans l'appareil."
+        },
+        "tokens": [
+          {
+            "name": "panel",
+            "type": "number",
+            "title": {
+              "en": "Panel",
+              "fr": "Panneau"
+            },
+            "example": 3
+          },
+          {
+            "name": "average",
+            "type": "number",
+            "title": {
+              "en": "Others average (W)",
+              "fr": "Moyenne des autres (W)"
+            },
+            "example": 350
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mx3000d"
+          }
+        ]
+      },
+      {
+        "id": "comm_lost",
+        "title": {
+          "en": "Communication with the inverter was lost",
+          "fr": "La communication avec l'onduleur est perdue"
+        },
+        "hint": {
+          "en": "The inverter was producing and has been unreachable for the delay set in the device settings.",
+          "fr": "L'onduleur produisait et reste injoignable depuis le délai réglé dans l'appareil."
+        },
+        "tokens": [
+          {
+            "name": "minutes",
+            "type": "number",
+            "title": {
+              "en": "Minutes",
+              "fr": "Minutes"
+            },
+            "example": 10
+          },
+          {
+            "name": "cause",
+            "type": "string",
+            "title": {
+              "en": "Probable cause",
+              "fr": "Cause probable"
+            },
+            "example": "Wi-Fi"
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mx3000d"
+          }
+        ]
+      },
+      {
+        "id": "comm_restored",
+        "title": {
+          "en": "Communication with the inverter was restored",
+          "fr": "La communication avec l'onduleur est rétablie"
+        },
+        "tokens": [
+          {
+            "name": "minutes",
+            "type": "number",
+            "title": {
+              "en": "Outage duration (min)",
+              "fr": "Durée de la coupure (min)"
+            },
+            "example": 12
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mx3000d"
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "id": "any_underperforming",
+        "title": {
+          "en": "A panel !{{is|is not}} underperforming",
+          "fr": "Un panneau !{{est|n'est pas}} sous-performant"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mx3000d"
+          }
+        ]
+      }
+    ]
+  },
+  "tags": {
+    "en": [
+      "tsun",
+      "solar",
+      "solar panels",
+      "micro-inverter",
+      "inverter",
+      "solarman",
+      "pv",
+      "energy"
+    ],
+    "fr": [
+      "tsun",
+      "solaire",
+      "panneaux solaires",
+      "micro-onduleur",
+      "onduleur",
+      "solarman",
+      "photovoltaïque",
+      "énergie"
+    ]
+  },
+  "support": "mailto:stephane.renaudet@gmail.com",
+  "api": {
+    "getLog": {
+      "method": "GET",
+      "path": "/log"
+    },
+    "clearLog": {
+      "method": "DELETE",
+      "path": "/log"
+    },
+    "getStatus": {
+      "method": "GET",
+      "path": "/status"
+    },
+    "getReport": {
+      "method": "GET",
+      "path": "/report"
+    },
+    "getBaseline": {
+      "method": "GET",
+      "path": "/baseline"
+    },
+    "resetBaseline": {
+      "method": "POST",
+      "path": "/baseline/reset"
+    }
+  },
+  "homeyCommunityTopicId": 161262,
+  "source": "https://github.com/Pepane13/homey-tsun-microinverters",
+  "bugs": {
+    "url": "https://github.com/Pepane13/homey-tsun-microinverters/issues"
+  }
+}

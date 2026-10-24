@@ -1,0 +1,52 @@
+<header class="homey-header">
+  <h1 class="homey-title">TSUN MX3000D</h1>
+  <p class="homey-subtitle" id="subtitle"></p>
+</header>
+
+<form class="homey-form" onsubmit="return false;">
+  <div class="homey-form-group">
+    <label class="homey-form-label" for="host" id="host-label"></label>
+    <input class="homey-form-input" id="host" type="text" inputmode="decimal" placeholder="192.168.1.50" autocomplete="off" />
+    <p class="homey-form-hint" id="host-hint"></p>
+  </div>
+  <div class="homey-form-group">
+    <label class="homey-form-label" for="sn" id="sn-label"></label>
+    <input class="homey-form-input" id="sn" type="text" inputmode="numeric" placeholder="3400000000" autocomplete="off" />
+    <p class="homey-form-hint" id="sn-hint"></p>
+  </div>
+  <p id="status" style="min-height:1.5em;"></p>
+  <button class="homey-button-primary-full" id="connect"></button>
+</form>
+
+<script type="application/javascript">
+  const $ = (id) => document.getElementById(id);
+  const t = {
+    subtitle: 'pair.subtitle', 'host-label': 'pair.host', 'host-hint': 'pair.host_hint',
+    'sn-label': 'pair.sn', 'sn-hint': 'pair.sn_hint', connect: 'pair.button',
+  };
+  for (const [id, key] of Object.entries(t)) $(id).textContent = Homey.__(key);
+
+  const btn = $('connect');
+  const status = $('status');
+
+  btn.addEventListener('click', async () => {
+    btn.classList.add('is-loading');
+    btn.disabled = true;
+    status.textContent = Homey.__('pair.connecting');
+    try {
+      const device = await Homey.emit('test', {
+        host: $('host').value,
+        loggerSn: $('sn').value,
+      });
+      status.textContent = `${Homey.__('pair.found')} ${device.data.id}`;
+      await Homey.createDevice(device);
+      Homey.done();
+    } catch (err) {
+      status.textContent = '';
+      Homey.alert(err.message || String(err), 'error');
+    } finally {
+      btn.classList.remove('is-loading');
+      btn.disabled = false;
+    }
+  });
+</script>

@@ -1,0 +1,273 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+  <style>
+    .section { margin-bottom: 24px; }
+    .status-card { border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; }
+    .status-card h3 { margin: 0 0 6px; font-size: 15px; }
+    .status-card table { width: 100%; border-collapse: collapse; }
+    .status-card td { padding: 2px 0; vertical-align: top; }
+    .status-card td:first-child { color: #777; padding-right: 8px; width: 48%; }
+    .bad { color: #c62828; font-weight: 600; }
+    .warn { color: #e65100; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+    .toolbar select { flex: 1 1 140px; }
+    .toolbar button { flex: 0 0 auto; }
+    #log { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; line-height: 1.45;
+           max-height: 420px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; padding: 6px; background: #fafafa; }
+    .row { padding: 2px 0; border-bottom: 1px solid #eee; word-break: break-word; }
+    .row .t { color: #888; }
+    .lvl-error { color: #c62828; }
+    .lvl-warn { color: #e65100; }
+    .lvl-debug { color: #777; }
+    #copybox, #reportbox { width: 100%; height: 160px; font-size: 11px; display: none; margin-top: 8px; }
+    .muted { color: #777; font-size: 12px; }
+    .bl { border-collapse: collapse; width: 100%; font-size: 12px; margin: 6px 0; }
+    .bl th, .bl td { border: 1px solid #e3e3e3; padding: 2px 4px; text-align: center; }
+    .bl th { background: #f3f3f3; font-weight: 600; }
+    .bl td.low { background: #fff1e0; color: #e65100; }
+    .bl td.vlow { background: #fde7e7; color: #c62828; font-weight: 600; }
+    .bl tr.learning td { color: #999; }
+  </style>
+</head>
+<body>
+  <header class="homey-header">
+    <h1 class="homey-title" id="t-title"></h1>
+    <p class="homey-subtitle" id="t-intro"></p>
+  </header>
+
+  <div class="section">
+    <h2 class="homey-subtitle" id="t-status-title"></h2>
+    <div id="status"></div>
+  </div>
+
+  <div class="section">
+    <h2 class="homey-subtitle" id="t-bl-title"></h2>
+    <p class="muted" id="t-bl-intro"></p>
+    <div id="baseline"></div>
+  </div>
+
+  <fieldset class="homey-form-fieldset section">
+    <legend class="homey-form-legend" id="t-notif-title"></legend>
+    <label class="homey-form-checkbox"><input class="homey-form-checkbox-input" type="checkbox" id="notify_comm" />
+      <span class="homey-form-checkbox-checkmark"></span><span class="homey-form-checkbox-text" id="t-notify_comm"></span></label>
+    <label class="homey-form-checkbox"><input class="homey-form-checkbox-input" type="checkbox" id="notify_panel" />
+      <span class="homey-form-checkbox-checkmark"></span><span class="homey-form-checkbox-text" id="t-notify_panel"></span></label>
+    <label class="homey-form-checkbox"><input class="homey-form-checkbox-input" type="checkbox" id="notify_alarm" />
+      <span class="homey-form-checkbox-checkmark"></span><span class="homey-form-checkbox-text" id="t-notify_alarm"></span></label>
+    <label class="homey-form-checkbox"><input class="homey-form-checkbox-input" type="checkbox" id="notify_grid" />
+      <span class="homey-form-checkbox-checkmark"></span><span class="homey-form-checkbox-text" id="t-notify_grid"></span></label>
+  </fieldset>
+
+  <div class="section">
+    <h2 class="homey-subtitle" id="t-export-title"></h2>
+    <p class="muted" id="t-export-intro"></p>
+    <div class="toolbar">
+      <button class="homey-button-primary-small" id="download"></button>
+      <button class="homey-button-secondary-small" id="show-report"></button>
+    </div>
+    <textarea id="reportbox" readonly></textarea>
+  </div>
+
+  <div class="section">
+    <h2 class="homey-subtitle" id="t-log-title"></h2>
+    <div class="homey-form-group">
+      <label class="homey-form-label" for="log_level" id="t-level"></label>
+      <select class="homey-form-select" id="log_level">
+        <option value="error" id="t-level_error"></option>
+        <option value="warn" id="t-level_warn"></option>
+        <option value="info" id="t-level_info"></option>
+        <option value="debug" id="t-level_debug"></option>
+      </select>
+    </div>
+    <div class="toolbar">
+      <span id="t-show" class="muted"></span>
+      <select class="homey-form-select" id="filter">
+        <option value="error" id="t-f-error"></option>
+        <option value="warn" id="t-f-warn"></option>
+        <option value="info" id="t-f-info" selected></option>
+        <option value="debug" id="t-f-debug"></option>
+      </select>
+      <button class="homey-button-secondary-small" id="refresh"></button>
+      <button class="homey-button-secondary-small" id="copy"></button>
+    </div>
+    <p class="muted" id="count"></p>
+    <div id="log"></div>
+    <textarea id="copybox" readonly></textarea>
+    <p><button class="homey-button-danger-small" id="clear"></button></p>
+  </div>
+
+  <script type="text/javascript">
+    function onHomeyReady(Homey) {
+      const $ = (id) => document.getElementById(id);
+      const __ = (k) => Homey.__(`settings.${k}`);
+      const esc = (s) => String(s == null ? '' : s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+      const fmtTime = (iso) => (iso ? new Date(iso).toLocaleString() : '—');
+
+      // Static texts
+      ['title', 'intro', 'status-title', 'notif-title', 'notify_comm', 'notify_panel', 'notify_alarm', 'notify_grid',
+        'log-title', 'level', 'level_error', 'level_warn', 'level_info', 'level_debug', 'show',
+        'export-title', 'export-intro', 'bl-title', 'bl-intro']
+        .forEach((k) => { $(`t-${k}`).textContent = __(k.replace('-', '_')); });
+      ['error', 'warn', 'info', 'debug'].forEach((l) => { $(`t-f-${l}`).textContent = __(`level_${l}`); });
+      $('refresh').textContent = __('refresh');
+      $('copy').textContent = __('copy');
+      $('clear').textContent = __('clear');
+      $('download').textContent = __('download');
+      $('show-report').textContent = __('show_report');
+
+      // Settings: notifications and log level
+      const NOTIFY_DEFAULTS = { notify_comm: true, notify_panel: true, notify_alarm: true, notify_grid: false };
+      Object.keys(NOTIFY_DEFAULTS).forEach((key) => {
+        Homey.get(key, (err, v) => { $(key).checked = (v === null || v === undefined) ? NOTIFY_DEFAULTS[key] : !!v; });
+        $(key).addEventListener('change', () => Homey.set(key, $(key).checked));
+      });
+      Homey.get('log_level', (err, v) => { $('log_level').value = v || 'info'; });
+      $('log_level').addEventListener('change', () => Homey.set('log_level', $('log_level').value, () => loadLog()));
+
+      // Device status
+      function loadStatus() {
+        Homey.api('GET', '/status', null, (err, list) => {
+          if (err) { $('status').textContent = err.message || String(err); return; }
+          $('status').innerHTML = (list || []).map((d) => {
+            const o = d.currentOutage;
+            const panels = [...new Set([...(d.panelsNotProducing || []), ...(d.panelsUnderperforming || [])])];
+            const rate = d.successRate1h;
+            const rows = [
+              [__('st_status'), esc(d.standby ? `${d.status || ''} (${__('standby')})` : d.status)],
+              [__('st_power'), d.power == null ? '—' : `${d.power} W`],
+              [__('st_last_ok'), fmtTime(d.lastOk)],
+              [__('st_latency'), `${d.latencyLast ?? '—'} / ${d.latencyAvgToday ?? '—'} / ${d.latencyMaxToday ?? '—'} ms`],
+              [__('st_rate'), rate == null ? '—' : `<span class="${rate < 95 ? 'bad' : ''}">${rate} %</span>`],
+              [__('st_reads'), `${d.readsToday.ok} / ${d.readsToday.failed}`],
+              [__('st_retries'), `${d.retriesToday ?? 0} / ${d.isolatedToday ?? 0}`],
+              [__('st_outages'), `${d.outagesToday.count} (${d.outagesToday.minutes} min)`],
+              [__('st_outage_now'), o ? `<span class="${o.duringProduction ? 'bad' : ''}">${o.minutes} min — ${esc(o.cause)}</span>` : __('none')],
+              [__('st_last_error'), d.lastError ? `${fmtTime(d.lastError.t)} — ${esc(d.lastError.text)} [${esc(d.lastError.code || '?')}]` : __('none')],
+              [__('st_panels'), panels.length ? `<span class="bad">${panels.join(', ')}</span>` : __('none')],
+            ];
+            return `<div class="status-card"><h3>${esc(d.name)} <span class="muted">${esc(d.host)}</span></h3><table>${
+              rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table></div>`;
+          }).join('') || `<p class="muted">${__('empty')}</p>`;
+        });
+      }
+
+      // Log
+      let lastEntries = [];
+      const line = (e) => `${new Date(e.t).toLocaleString()} [${e.l.toUpperCase()}] ${e.s} (${e.c}) ${e.m}`;
+      function loadLog() {
+        Homey.api('GET', `/log?level=${$('filter').value}`, null, (err, entries) => {
+          if (err) { $('log').textContent = err.message || String(err); return; }
+          lastEntries = entries || [];
+          $('count').textContent = `${lastEntries.length} ${__('entries')}`;
+          $('log').innerHTML = lastEntries.length
+            ? lastEntries.slice().reverse().map((e) => `<div class="row lvl-${e.l}"><span class="t">${esc(new Date(e.t).toLocaleString())}</span> `
+              + `<b>${e.l.toUpperCase()}</b> ${esc(e.s)} · ${esc(e.c)} — ${esc(e.m)}</div>`).join('')
+            : `<p class="muted">${__('empty')}</p>`;
+        });
+      }
+      $('filter').addEventListener('change', loadLog);
+      $('refresh').addEventListener('click', () => { loadStatus(); loadBaseline(); loadLog(); });
+
+      $('copy').addEventListener('click', async () => {
+        const text = lastEntries.map(line).join('\n');
+        try {
+          await navigator.clipboard.writeText(text);
+          Homey.alert(__('copied'));
+        } catch (e) {
+          const box = $('copybox');
+          box.style.display = 'block';
+          box.value = text;
+          box.focus();
+          box.select();
+          Homey.alert(__('copy_manual'));
+        }
+      });
+
+      $('clear').addEventListener('click', () => {
+        Homey.confirm(__('confirm_clear'), 'warning', (err, ok) => {
+          if (!ok) return;
+          Homey.api('DELETE', '/log', null, () => loadLog());
+        });
+      });
+
+      // Diagnostic report export
+      function getReport(cb) {
+        Homey.api('GET', '/report', null, (err, report) => {
+          if (err) { Homey.alert(err.message || String(err), 'error'); return; }
+          cb(report);
+        });
+      }
+      function showReport(report) {
+        const box = $('reportbox');
+        box.style.display = 'block';
+        box.value = report.text;
+        box.focus();
+        box.select();
+      }
+      $('download').addEventListener('click', () => getReport((report) => {
+        try {
+          const blob = new Blob([report.text], { type: 'text/plain;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = report.filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+          Homey.alert(__('report_ready'));
+        } catch (e) {
+          showReport(report); // download not supported (mobile app): show it for copy
+          Homey.alert(__('copy_manual'));
+        }
+      }));
+      $('show-report').addEventListener('click', () => getReport(async (report) => {
+        showReport(report);
+        try {
+          await navigator.clipboard.writeText(report.text);
+          Homey.alert(__('report_copied'));
+        } catch (e) {
+          Homey.alert(__('copy_manual'));
+        }
+      }));
+
+      // Learned panel profile
+      function loadBaseline() {
+        Homey.api('GET', '/baseline', null, (err, list) => {
+          if (err) { $('baseline').textContent = err.message || String(err); return; }
+          $('baseline').innerHTML = (list || []).map((b) => {
+            const head = `<h3>${esc(b.name)}</h3>`
+              + `<p class="muted">${__(b.mode === 'adaptive' ? 'bl_mode_adaptive' : 'bl_mode_simple')} · `
+              + `${__('bl_slots')} : ${b.learnedSlots} (${b.readySlots} ${__('bl_ready')})`
+              + `${b.since ? ` · ${__('bl_since')} ${esc(b.since)}` : ''}</p>`;
+            if (!b.hours.length) return `<div class="status-card">${head}<p class="muted">${__('bl_empty')}</p></div>`;
+            const cls = (v) => (v < 60 ? 'vlow' : v < 85 ? 'low' : '');
+            const rows = b.hours.map((h) => `<tr class="${h.ready ? '' : 'learning'}"><th>${String(h.hour).padStart(2, '0')} h</th>`
+              + `${h.ratios.map((v) => `<td class="${h.ready && v !== null ? cls(v) : ''}">${v === null ? '—' : v}</td>`).join('')}`
+              + `<td class="muted">${h.ready ? '' : __('bl_learning')}</td></tr>`).join('');
+            const daily = `<p class="muted">${__('bl_daily')} : ${b.daily.share.map((v, i) => `PV${i + 1} ${v} %`).join(' · ')}`
+              + ` (${b.daily.days} ${__('bl_days')})</p>`;
+            return `<div class="status-card">${head}<table class="bl"><tr><th>${__('bl_hour')}</th>`
+              + `${b.hours[0].ratios.map((v, i) => `<th>PV${i + 1}</th>`).join('')}<th></th></tr>${rows}</table>${daily}`
+              + `<button class="homey-button-secondary-small" data-reset="${esc(b.id)}">${__('bl_reset')}</button></div>`;
+          }).join('') || `<p class="muted">${__('bl_empty')}</p>`;
+          document.querySelectorAll('[data-reset]').forEach((btn) => btn.addEventListener('click', () => {
+            Homey.confirm(__('bl_confirm'), 'warning', (e, ok) => {
+              if (!ok) return;
+              Homey.api('POST', '/baseline/reset', { id: btn.getAttribute('data-reset') }, () => { loadBaseline(); loadLog(); });
+            });
+          }));
+        });
+      }
+
+      loadStatus();
+      loadBaseline();
+      loadLog();
+      Homey.ready();
+    }
+  </script>
+</body>
+</html>

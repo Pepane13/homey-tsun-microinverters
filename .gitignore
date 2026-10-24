@@ -1,0 +1,15 @@
+# Homey CLI build
+.homeybuild/
+node_modules/
+# Archives
+*.zip
+# Installation-specific diagnostic data and scripts (IP addresses, serial numbers)
+scan*.txt
+tsun_*.py
+# Python
+__pycache__/
+*.pyc
+# Misc
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,7 @@
+{
+  "name": "com.pepane13.tsun",
+  "version": "1.4.1",
+  "private": true,
+  "main": "app.js",
+  "license": "GPL-3.0-or-later"
+}
