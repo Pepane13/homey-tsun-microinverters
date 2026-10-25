@@ -5,6 +5,7 @@ const en = require('../com.pepane13.tsun/locales/en.json');
 const trig = [];
 const notifications = [];
 const appSettings = {};
+const realtime = [];
 const settingsListeners = [];
 const settings = {
   get: (k) => (k in appSettings ? appSettings[k] : null),
@@ -21,6 +22,7 @@ const homey = {
   notifications: { createNotification: async ({ excerpt }) => notifications.push(excerpt) },
   flow: { getDeviceTriggerCard: (id) => ({ trigger: async (dev, tokens) => trig.push({ id, tokens }) }) },
   manifest: { version: 'test' },
+  api: { realtime: (event, data) => realtime.push({ event, data }) },
 };
 
 class Device {
@@ -55,4 +57,4 @@ class Device {
 const { DiagLog } = require(path.join(__dirname, '..', 'com.pepane13.tsun', 'lib', 'diaglog'));
 homey.app = { diag: new DiagLog(homey) };
 
-module.exports = { Device, Driver: class {}, App: class {}, _trig: trig, _notifications: notifications, _homey: homey, _settings: appSettings };
+module.exports = { Device, Driver: class {}, App: class {}, _trig: trig, _notifications: notifications, _homey: homey, _settings: appSettings, _realtime: realtime };

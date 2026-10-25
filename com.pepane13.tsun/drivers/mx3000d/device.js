@@ -637,6 +637,10 @@ module.exports = class Mx3000dDevice extends Homey.Device {
 
     await this._checkInverter(d);
     await this._checkPanels(d.panels.map((p) => p.power), Date.now(), d.panels.map((p) => p.voltage));
+
+    // Dashboard widget: keep the last reading and notify open widgets
+    this.lastReading = { ...d, t: Date.now() };
+    try { this.homey.api.realtime('tsun_update', { id: this.getData().id }); } catch (err) { /* no listener */ }
   }
 
   // ---------- Grid and inverter checks ----------
@@ -833,6 +837,62 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       }
     }
     await this._saveBaseline(true);
+  }
+
+  /** Data for the dashboard widget (lib/../widgets/production). */
+  getWidgetData() {
+    const v = (cap) => this.getCapabilityValue(cap);
+    const d = this.lastReading;
+    const now = Date.now();
+    const panels = Array.from({ length: PANELS }, (_, i) => {
+      const p = d ? d.panels[i] : null;
+      let state = 'ok';
+      if (this.standby) state = 'off';
+      else if (this.zeroWatch[i].flagged) state = 'zero';
+      else if (this.panelWatch[i].flagged) state = 'under';
+      return {
+        n: i + 1,
+        power: v(`tsun_panel_power.pv${i + 1}`),
+        energy: v(`tsun_panel_energy.pv${i + 1}`),
+        voltage: p && !this.standby ? p.voltage : null,
+        current: p && !this.standby ? p.current : null,
+        total: p ? p.energyTotal : null,
+        state,
+      };
+    });
+    // Expected power of each panel at this time (adaptive profile), when available
+    const powers = panels.map((p) => p.power || 0);
+    const mean = powers.reduce((s, x) => s + x, 0) / PANELS;
+    if (!this.standby && mean > 0 && this._adaptive()) {
+      const exp = this.baseline.expected(PanelBaseline.slotOf(now, this.homey.clock.getTimezone()));
+      if (exp) panels.forEach((p, i) => { p.expected = exp[i] !== null ? round(exp[i] * mean) : null; });
+    }
+    const dc = d && !this.standby ? round(d.panels.reduce((s, p) => s + p.power, 0)) : null;
+    const power = v('measure_power');
+    return {
+      id: this.getData().id,
+      name: this.getName(),
+      status: v('tsun_status'),
+      standby: this.standby,
+      unreachable: !!(this.comm.outage && this.comm.outage.powerBefore >= PRODUCING_W),
+      alarm: v('alarm_generic'),
+      power,
+      ratedPower: d && d.ratedPower ? d.ratedPower : 3000,
+      today: v('tsun_energy.today'),
+      total: v('meter_power'),
+      voltage: v('tsun_voltage.grid'),
+      current: v('tsun_current.grid'),
+      frequency: v('tsun_frequency.grid'),
+      temperature: v('tsun_temperature.inverter'),
+      latency: v('tsun_latency.logger'),
+      successRate: v('tsun_ratio.comm'),
+      dc,
+      efficiency: dc && dc > 50 && power ? round((100 * power) / dc, 1) : null,
+      peak: this.dayStats.peak ? Math.round(this.dayStats.peak) : null,
+      peakAt: this.dayStats.peakAt ? this._time(this.dayStats.peakAt) : null,
+      lastRead: this.comm.lastOk ? this._time(this.comm.lastOk.t) : null,
+      panels,
+    };
   }
 
   getBaselineSummary() {

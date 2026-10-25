@@ -140,5 +140,19 @@
     "bl_confirm": "Reset the learned profile of this inverter? Use it after a change (pruned tree, cleaned or replaced panel). Underperformance alerts resume once the time slots have been learned again (3 sunny days).",
     "bl_empty": "Nothing learned yet: the profile builds up while the panels produce.",
     "st_retries": "Retries / isolated failures today"
+  },
+  "widget": {
+    "today": "Today",
+    "total": "Total",
+    "peak": "Peak today",
+    "grid": "Grid",
+    "inverter": "Inverter",
+    "efficiency": "Efficiency DC→AC",
+    "wifi": "Logger link",
+    "updated": "Updated",
+    "of": "of",
+    "expected": "usual production at this time",
+    "no_device": "No TSUN inverter added yet",
+    "dc": "Panels (DC)"
   }
 }

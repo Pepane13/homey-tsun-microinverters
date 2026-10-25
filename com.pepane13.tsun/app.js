@@ -48,6 +48,15 @@ module.exports = class TsunApp extends Homey.App {
     return device.getBaselineSummary();
   }
 
+  /** Data for the dashboard widget: first device (or the one at `index`), with translated labels. */
+  getWidgetData(index = 0) {
+    const devices = this.homey.drivers.getDriver('mx3000d').getDevices();
+    const labels = this.homey.__('widget');
+    if (!devices.length) return { device: null, labels };
+    const device = devices[Math.min(Math.max(Number(index) || 0, 0), devices.length - 1)];
+    return { device: device.getWidgetData(), count: devices.length, labels };
+  }
+
   /** Snapshot of every device, for the settings page. */
   getStatus() {
     const driver = this.homey.drivers.getDriver('mx3000d');

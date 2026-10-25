@@ -140,5 +140,19 @@
     "bl_confirm": "Réinitialiser le profil appris de cet onduleur ? À faire après un changement (arbre élagué, panneau nettoyé ou remplacé). Les alertes de sous-performance reprendront une fois les tranches horaires réapprises (3 jours ensoleillés).",
     "bl_empty": "Rien d'appris pour l'instant : le profil se construit pendant que les panneaux produisent.",
     "st_retries": "Nouvelles tentatives / échecs isolés aujourd'hui"
+  },
+  "widget": {
+    "today": "Aujourd'hui",
+    "total": "Total",
+    "peak": "Pic du jour",
+    "grid": "Réseau",
+    "inverter": "Onduleur",
+    "efficiency": "Rendement DC→AC",
+    "wifi": "Liaison logger",
+    "updated": "Mis à jour",
+    "of": "de",
+    "expected": "production habituelle à cette heure",
+    "no_device": "Aucun onduleur TSUN ajouté",
+    "dc": "Panneaux (DC)"
   }
 }

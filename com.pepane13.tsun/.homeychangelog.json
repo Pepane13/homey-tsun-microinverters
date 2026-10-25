@@ -1,4 +1,8 @@
 {
+  "1.5.0": {
+    "en": "New dashboard widget \"Solar production\": your panels drawn in their roof layout (order and number of columns adjustable) with live power, voltage, current, daily yield and usual production at that time; a top band with power and gauge, daily and total yield, peak of the day, grid voltage and frequency, inverter temperature, DC power, DC→AC efficiency and logger link quality. Updated after every read.",
+    "fr": "Nouveau widget de tableau de bord « Production solaire » : vos panneaux dessinés selon leur disposition sur le toit (ordre et nombre de colonnes réglables) avec puissance, tension, courant, production du jour et production habituelle à cette heure ; un bandeau avec puissance et jauge, production du jour et totale, pic du jour, tension et fréquence réseau, température onduleur, puissance DC, rendement DC→AC et qualité de la liaison logger. Mis à jour à chaque lecture."
+  },
   "1.4.1": {
     "en": "Fewer false communication warnings: collisions on the logger–inverter link (corrupted answer, no answer) are retried within the read; an isolated failed read is no longer a warning; slow answers with a fast connection are attributed to a busy logger, not to Wi-Fi.",
     "fr": "Moins de faux avertissements de communication : les collisions sur la liaison logger–onduleur (réponse corrompue, absence de réponse) sont réessayées pendant la lecture ; un échec de lecture isolé n'est plus un avertissement ; une réponse lente avec une connexion rapide est attribuée au logger occupé, pas au Wi-Fi."

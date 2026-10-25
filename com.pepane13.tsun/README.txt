@@ -6,6 +6,7 @@ What you get:
 - Homey Energy integration: the inverter appears as a solar panel, with live production and a total yield meter
 - Grid voltage, current and frequency, inverter temperature, alarm indicator and detailed status
 - Live power and daily yield for each of the 6 panels
+- Dashboard widget: your panels drawn in their roof layout (order and columns adjustable) with live production and usual production at that time, plus a top band with power, daily and total yield, peak of the day, grid, temperature, DC→AC efficiency and logger link
 - Flow cards: a panel is underperforming (compared with the average of the others, with adjustable threshold and duration), a panel is back to normal, the inverter status changed
 - Diagnostics in the app settings: Wi-Fi analysis with probable cause, logger response time chart, communication loss alerts, panels not producing, grid voltage and temperature warnings, daily summary, and a diagnostic log you can copy
 - Adaptive panel monitoring: each panel is compared with its own usual production at that time of day, learned automatically, so recurring shadows do not raise alerts

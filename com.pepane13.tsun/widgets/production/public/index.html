@@ -1,0 +1,171 @@
+<html>
+<head>
+  <style>
+    :root {
+      --panel-body: #1f3554;
+      --panel-cell: rgba(255, 255, 255, 0.10);
+      --panel-fill: rgba(242, 140, 40, 0.88);
+      --panel-off: #6b7280;
+      --chip-bg: var(--homey-color-mono-050, #f4f5f7);
+    }
+    .homey-dark-mode { --chip-bg: var(--homey-color-mono-100, #2a2c31); }
+    body { margin: 0; }
+    .wrap { display: flex; flex-direction: column; gap: var(--homey-su-3, 12px); }
+
+    /* ---------- Top band ---------- */
+    .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .status { display: flex; align-items: center; gap: 6px; font-size: var(--homey-font-size-small, 14px);
+              font-weight: var(--homey-font-weight-medium, 500); color: var(--homey-text-color, #222); }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--homey-color-green, #2fb344); flex: none; }
+    .dot.warn { background: var(--homey-color-orange, #f28c28); }
+    .dot.bad { background: var(--homey-color-red, #e5484d); }
+    .dot.off { background: var(--homey-text-color-light, #999); }
+    .updated { font-size: var(--homey-font-size-small, 14px); color: var(--homey-text-color-light, #888); white-space: nowrap; }
+
+    .power { display: flex; align-items: baseline; gap: 6px; }
+    .power .val { font-size: var(--homey-font-size-xxlarge, 32px); line-height: var(--homey-line-height-xxlarge, 40px);
+                  font-weight: var(--homey-font-weight-bold, 700); color: var(--homey-text-color, #222); }
+    .power .unit { font-size: var(--homey-font-size-large, 20px); color: var(--homey-text-color-light, #888); }
+    .gauge { height: 6px; border-radius: 3px; background: var(--chip-bg); overflow: hidden; }
+    .gauge > div { height: 100%; background: var(--panel-fill); border-radius: 3px; transition: width .6s; }
+    .gauge-label { font-size: 12px; color: var(--homey-text-color-light, #888); margin-top: 3px; }
+
+    .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+    .chip { background: var(--chip-bg); border-radius: var(--homey-border-radius-small, 8px); padding: 6px 8px; min-width: 0; }
+    .chip .k { font-size: 12px; color: var(--homey-text-color-light, #888); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chip .v { font-size: var(--homey-font-size-small, 14px); font-weight: var(--homey-font-weight-medium, 500);
+               color: var(--homey-text-color, #222); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chip .v.warn { color: var(--homey-text-color-warning, #c76b00); }
+
+    /* ---------- Panels ---------- */
+    .panels { display: grid; gap: 8px; }
+    .panel { position: relative; aspect-ratio: 2 / 3; border-radius: 8px; background: var(--panel-body); overflow: hidden;
+             border: 2px solid transparent; color: #fff; }
+    .panel.off { background: var(--panel-off); }
+    .panel.under { border-color: var(--homey-color-orange, #f28c28); }
+    .panel.zero { border-color: var(--homey-color-red, #e5484d); }
+    .panel .fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--panel-fill); transition: height .6s; }
+    .panel .cells { position: absolute; inset: 0;
+      background-image: linear-gradient(var(--panel-cell) 1px, transparent 1px), linear-gradient(90deg, var(--panel-cell) 1px, transparent 1px);
+      background-size: 33.34% 16.67%; }
+    .panel .expected { position: absolute; left: 0; right: 0; height: 0; }
+    .panel .expected::before, .panel .expected::after { content: ''; position: absolute; top: -1px; width: 16%;
+      border-top: 3px solid rgba(255, 255, 255, 0.95); }
+    .panel .expected::before { left: 0; border-radius: 0 2px 2px 0; }
+    .panel .expected::after { right: 0; border-radius: 2px 0 0 2px; }
+    .panel .txt { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 6px;
+                  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55); }
+    .panel .name { font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; }
+    .panel .w { font-size: var(--homey-font-size-large, 20px); font-weight: 700; text-align: center; line-height: 1.1; }
+    .panel .w small { display: block; font-size: 11px; font-weight: 500; opacity: .9; }
+    .panel .kwh { font-size: 12px; text-align: center; }
+    .legend { font-size: 12px; color: var(--homey-text-color-light, #888); display: flex; gap: 12px; flex-wrap: wrap; }
+    .legend i { display: inline-block; width: 10px; border-top: 3px solid var(--homey-text-color-light, #888); vertical-align: middle; margin-right: 4px; }
+    .empty { font-size: var(--homey-font-size-small, 14px); color: var(--homey-text-color-light, #888); text-align: center; padding: 24px 0; }
+  </style>
+</head>
+<body class="homey-widget">
+  <div class="wrap" id="root"></div>
+
+  <script type="text/javascript">
+    function onHomeyReady(Homey) {
+      const root = document.getElementById('root');
+      const settings = Homey.getSettings() || {};
+      const columns = Number(settings.columns) || 3;
+      const panelMax = Number(settings.panel_max) || 500;
+      const order = String(settings.order || '1,2,3,4,5,6').split(/[^0-9]+/).map(Number).filter((n) => n >= 1 && n <= 6);
+      const deviceIndex = Math.max((Number(settings.device) || 1) - 1, 0);
+      let ready = false;
+      let lastHeight = 0;
+
+      const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const num = (v, d = 0) => (v == null || Number.isNaN(Number(v)) ? '—'
+        : Number(v).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }));
+
+      function fitHeight() {
+        // height of the content (not of the page, which is at least as tall as the widget frame)
+        const cs = getComputedStyle(document.body);
+        const h = Math.ceil(root.getBoundingClientRect().height + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom));
+        if (!ready) { Homey.ready({ height: h }); ready = true; lastHeight = h; return; }
+        if (Math.abs(h - lastHeight) > 2 && Homey.setHeight) { Homey.setHeight(h); lastHeight = h; }
+      }
+
+      function render({ device: d, labels: L, count }) {
+        L = L || {};
+        if (!d) {
+          root.innerHTML = `<div class="empty">${esc(L.no_device || 'No TSUN inverter added yet')}</div>`;
+          fitHeight();
+          return;
+        }
+        let dot = 'ok';
+        if (d.unreachable || d.alarm) dot = 'bad';
+        else if (d.standby) dot = 'off';
+        else if (d.panels.some((p) => p.state === 'under' || p.state === 'zero')) dot = 'warn';
+        const pct = d.ratedPower ? Math.min(100, (100 * (d.power || 0)) / d.ratedPower) : 0;
+        const slow = d.latency != null && d.latency > 3000;
+        const lowRate = d.successRate != null && d.successRate < 95;
+
+        const chips = [
+          [L.today, `${num(d.today, 2)} kWh`],
+          [L.total, `${num(d.total, 1)} kWh`],
+          [L.peak, d.peak ? `${num(d.peak)} W · ${esc(d.peakAt || '')}` : '—'],
+          [L.grid, `${num(d.voltage, 1)} V · ${num(d.frequency, 2)} Hz`],
+          [L.inverter, `${num(d.temperature)} °C`],
+          [L.dc, d.dc != null ? `${num(d.dc)} W` : '—'],
+          [L.efficiency, d.efficiency != null ? `${num(d.efficiency, 1)} %` : '—'],
+          [L.wifi, `${d.latency != null ? `${num(d.latency)} ms` : '—'} · ${d.successRate != null ? `${num(d.successRate)} %` : '—'}`, slow || lowRate],
+        ];
+
+        const byN = Object.fromEntries(d.panels.map((p) => [p.n, p]));
+        const list = (order.length ? order : [1, 2, 3, 4, 5, 6]).map((n) => byN[n]).filter(Boolean);
+        const anyExpected = list.some((p) => p.expected != null);
+
+        const panelsHtml = list.map((p) => {
+          const h = Math.max(0, Math.min(100, (100 * (p.power || 0)) / panelMax));
+          const eh = p.expected != null ? Math.max(0, Math.min(100, (100 * p.expected) / panelMax)) : null;
+          const flag = p.state === 'zero' ? '⛔' : p.state === 'under' ? '⚠︎' : '';
+          return `<div class="panel ${p.state}">
+            <div class="fill" style="height:${p.state === 'off' ? 0 : h}%"></div>
+            <div class="cells"></div>
+            ${eh != null && p.state !== 'off' ? `<div class="expected" style="bottom:${eh}%"></div>` : ''}
+            <div class="txt">
+              <div class="name"><span>PV${p.n}</span><span>${flag}</span></div>
+              <div class="w">${p.state === 'off' ? '—' : `${num(p.power)} W`}
+                ${p.voltage != null ? `<small>${num(p.voltage, 1)} V · ${num(p.current, 2)} A</small>` : ''}</div>
+              <div class="kwh">${num(p.energy, 2)} kWh</div>
+            </div>
+          </div>`;
+        }).join('');
+
+        root.innerHTML = `
+          <div class="head">
+            <div class="status"><span class="dot ${dot}"></span>${esc(d.status || '')}${count > 1 ? ` · ${esc(d.name)}` : ''}</div>
+            <div class="updated">${d.lastRead ? `${esc(L.updated)} ${esc(d.lastRead)}` : ''}</div>
+          </div>
+          <div>
+            <div class="power"><span class="val">${num(d.power)}</span><span class="unit">W</span></div>
+            <div class="gauge"><div style="width:${pct}%"></div></div>
+            <div class="gauge-label">${num(pct)} % ${esc(L.of)} ${num(d.ratedPower)} W</div>
+          </div>
+          <div class="chips">${chips.map(([k, v, w]) => `<div class="chip"><div class="k">${esc(k)}</div><div class="v ${w ? 'warn' : ''}">${v}</div></div>`).join('')}</div>
+          <div class="panels" style="grid-template-columns: repeat(${columns}, 1fr)">${panelsHtml}</div>
+          ${anyExpected ? `<div class="legend"><span><i></i>${esc(L.expected)}</span></div>` : ''}`;
+        fitHeight();
+      }
+
+      function load() {
+        Homey.api('GET', `/?device=${deviceIndex}`)
+          .then(render)
+          .catch((err) => {
+            root.innerHTML = `<div class="empty">${esc(err && err.message ? err.message : err)}</div>`;
+            fitHeight();
+          });
+      }
+
+      Homey.on('tsun_update', load);
+      setInterval(load, 60000);
+      load();
+    }
+  </script>
+</body>
+</html>

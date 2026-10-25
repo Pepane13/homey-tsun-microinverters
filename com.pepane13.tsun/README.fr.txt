@@ -6,6 +6,7 @@ Fonctions :
 - Intégration à Homey Énergie : l'onduleur apparaît comme panneau solaire, avec la production instantanée et le compteur de production totale
 - Tension, courant et fréquence réseau, température de l'onduleur, alarme et statut détaillé
 - Puissance et production du jour de chacun des 6 panneaux
+- Widget de tableau de bord : vos panneaux dessinés selon leur disposition sur le toit (ordre et colonnes réglables) avec leur production en direct et la production habituelle à cette heure, et un bandeau avec puissance, production du jour et totale, pic du jour, réseau, température, rendement DC→AC et liaison logger
 - Cartes Flow : un panneau est sous-performant (par rapport à la moyenne des autres, seuil et durée réglables), un panneau est revenu à la normale, le statut de l'onduleur a changé
 - Diagnostic dans les réglages de l'app : analyse Wi-Fi avec cause probable, courbe du temps de réponse du logger, alertes de perte de communication, panneau qui ne produit pas, alertes tension réseau et température, bilan quotidien et journal de diagnostic copiable
 - Surveillance adaptative des panneaux : chaque panneau est comparé à sa propre production habituelle à cette heure, apprise automatiquement ; les ombrages récurrents ne déclenchent pas d'alerte
