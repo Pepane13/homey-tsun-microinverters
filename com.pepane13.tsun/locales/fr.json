@@ -80,7 +80,10 @@
     "retry": "Nouvelle tentative n° {attempt} après une erreur transitoire : {cause} [{code}]",
     "retry_rate": "Liaison logger–onduleur perturbée : {pct} % des lectures de la dernière heure ont nécessité une nouvelle tentative ou ont échoué ({n} sur {total})",
     "isolated": "Échec de lecture isolé, rétabli au cycle suivant ({cause})",
-    "read_fail_repeated": "{count} lectures consécutives en échec alors que l'onduleur produisait {power} W : {cause} [{code}]"
+    "read_fail_repeated": "{count} lectures consécutives en échec alors que l'onduleur produisait {power} W : {cause} [{code}]",
+    "temp_default_changed": "Alerte température relevée de 80 à {limit} °C (nouvelle valeur par défaut : 80 °C est normal pour cet onduleur par beau temps)",
+    "startup_grace": "Onduleur injoignable depuis {minutes} min juste après le démarrage de l'app (Homey ou réseau en cours de redémarrage) : pas encore d'alerte",
+    "derating": "Bridage thermique probable à {temp} °C : puissance DC passée de {before} à {after} W en 5 min alors que la tension a monté sur {panels} panneaux"
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostic",

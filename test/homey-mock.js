@@ -44,6 +44,7 @@ class Device {
   async unsetStoreValue(k) { delete this.store[k]; }
   getSetting(k) { return this.settings[k]; }
   getSettings() { return { ...this.settings }; }
+  async setSettings(o) { Object.assign(this.settings, o); }
   getCapabilities() { return Object.keys(this.caps); }
   getAvailable() { return this.available; }
   async setAvailable() { this.available = true; }

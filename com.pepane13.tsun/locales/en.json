@@ -80,7 +80,10 @@
     "retry": "Retry #{attempt} after a transient error: {cause} [{code}]",
     "retry_rate": "Logger–inverter link disturbed: {pct} % of the reads over the last hour needed a retry or failed ({n} of {total})",
     "isolated": "Isolated failed read, recovered at the next cycle ({cause})",
-    "read_fail_repeated": "{count} consecutive failed reads while the inverter was producing {power} W: {cause} [{code}]"
+    "read_fail_repeated": "{count} consecutive failed reads while the inverter was producing {power} W: {cause} [{code}]",
+    "temp_default_changed": "Temperature alert raised from 80 to {limit} °C (new default: 80 °C is normal for this inverter on sunny days)",
+    "startup_grace": "Inverter unreachable for {minutes} min just after the app started (Homey or network restarting): no alert yet",
+    "derating": "Possible thermal derating at {temp} °C: DC power down from {before} to {after} W in 5 min while the panel voltage rose on {panels} panels"
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostics",

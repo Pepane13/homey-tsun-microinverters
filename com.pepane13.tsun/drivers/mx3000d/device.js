@@ -23,6 +23,18 @@ const RATE_LIMIT_MIN = 30; // repeated warnings of the same kind are logged at m
 const BASELINE_SAVE_MS = 15 * 60 * 1000; // learned panel profile saved at most every 15 min
 const DAILY_MIN_KWH = 1; // daily degradation check only on days with at least 1 kWh
 const DAY_STATS_SAVE_MS = 5 * 60 * 1000; // daily statistics are saved at most every 5 min (and on key events)
+const UNREACHABLE_POLL_S = 60; // polling interval while unreachable during production (night standby: 5 min)
+const LAST_OK_MAX_AGE_MS = 30 * 60 * 1000; // last reading restored after a restart if younger than this
+const STARTUP_GRACE_MS = 15 * 60 * 1000; // no 'communication lost' alert during the first 15 min (network restarting)
+const TEMP_ALERT_DEFAULT = 90; // °C, default of the temperature alert setting (80 before v1.5.1)
+// Thermal derating: the inverter moves its operating point towards the open-circuit voltage,
+// so the panel power falls while the panel voltage rises (a cloud lowers power without raising voltage)
+const DERATE_WINDOW_MS = 5 * 60 * 1000; // comparison over 5 min
+const DERATE_POWER_DROP = 0.10; // DC power down by at least 10 %...
+const DERATE_VOLTAGE_RISE = 0.04; // ...while the voltage rises by at least 4 %...
+const DERATE_MIN_PANELS = 4; // ...on at least 4 of the 6 panels
+const DERATE_MIN_DC_W = 600; // only with a significant production
+const DERATE_TEMP_MARGIN = 15; // and an inverter temperature within 15 °C of the alert limit
 
 // Capabilities from earlier versions, replaced by tsun_* capabilities
 // (Homey Energy must only see one measure_power and one meter_power)
@@ -101,6 +113,9 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     this.zeroWatch = Array.from({ length: PANELS }, () => ({ since: null, flagged: false }));
     // Communication tracking
     this.comm = { window: [], lastOk: null, outage: null, lastError: null, lastLatency: null };
+    this.startedAt = Date.now();
+    this.history = []; // recent readings for the thermal derating check: { t, temp, panels: [{ p, v }] }
+    this._restoreLastOk();
     this.dayStats = newDayStats();
     this.dayStatsSavedAt = 0;
     this.rateLimit = {};
@@ -109,6 +124,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     this.baselineSavedAt = Date.now();
 
     await this._migrateCapabilities();
+    await this._migrateSettings();
 
     this.triggerUnderperforming = this.homey.flow.getDeviceTriggerCard('panel_underperforming');
     this.triggerRecovered = this.homey.flow.getDeviceTriggerCard('panel_recovered');
@@ -128,6 +144,31 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     for (const cap of this.driver.manifest.capabilities) {
       if (!this.hasCapability(cap)) await this.addCapability(cap).catch(this.error);
     }
+  }
+
+  /** v1.5.1: the default temperature alert goes from 80 to 90 °C (80 °C is reached on any sunny day). */
+  async _migrateSettings() {
+    if (this.getStoreValue('settingsVersion') >= 2) return;
+    if (Number(this.getSetting('temp_alert')) === 80) {
+      await this.setSettings({ temp_alert: TEMP_ALERT_DEFAULT }).catch(this.error);
+      this._diag('info', 'app', this._t('diag.temp_default_changed', { limit: TEMP_ALERT_DEFAULT }));
+    }
+    await this.setStoreValue('settingsVersion', 2).catch(this.error);
+  }
+
+  /**
+   * Last successful reading, kept across restarts: after a Homey restart in daytime, a failed
+   * first read must be handled as an outage during production, not as the night standby.
+   */
+  _restoreLastOk() {
+    const saved = this.getStoreValue('lastOk');
+    if (!saved || typeof saved.t !== 'number' || Date.now() - saved.t > LAST_OK_MAX_AGE_MS) return;
+    this.comm.lastOk = { t: saved.t, power: Number(saved.power) || 0 };
+  }
+
+  async _saveLastOk() {
+    if (!this.comm.lastOk) return;
+    await this.setStoreValue('lastOk', this.comm.lastOk).catch((err) => this.error('lastOk save:', err.message));
   }
 
   /** Used by the 'a panel is underperforming' condition card. */
@@ -303,6 +344,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     this.dayStatsSavedAt = now;
     await this.setStoreValue('dayStats', { day: this._todayKey(), stats: this.dayStats })
       .catch((err) => this.error('Day stats save:', err.message));
+    await this._saveLastOk();
   }
 
   // ---------- Daily counters ----------
@@ -411,7 +453,10 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     } catch (err) {
       client.close();
       await this._onReadFailure(err);
-      if (this.failures >= STANDBY_AFTER_FAILURES) next = Math.max(interval, STANDBY_POLL_S);
+      if (this.failures >= STANDBY_AFTER_FAILURES) {
+        const night = !this.comm.outage || this.comm.outage.powerBefore < PRODUCING_W;
+        next = Math.max(interval, night ? STANDBY_POLL_S : UNREACHABLE_POLL_S);
+      }
     } finally {
       client.close();
     }
@@ -462,7 +507,9 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       this.comm.outage = null;
       await this._saveDayStats(true);
     }
+    const wasProducing = this.comm.lastOk && this.comm.lastOk.power >= PRODUCING_W;
     this.comm.lastOk = { t: now, power: d.power };
+    if (wasProducing !== (d.power >= PRODUCING_W)) await this._saveLastOk();
 
     if (connectMs > SLOW_CONNECT_MS) {
       // the TCP connection itself is slow: weak Wi-Fi
@@ -537,7 +584,12 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     // Prolonged outage while the inverter was producing: alert
     const delayMin = Number(this.getSetting('comm_alert_delay')) || 10;
     const minutes = round((now - o.start) / 60000, 1);
-    if (o.powerBefore >= PRODUCING_W && !o.alerted && minutes >= delayMin) {
+    const starting = now - this.startedAt < STARTUP_GRACE_MS;
+    if (o.powerBefore >= PRODUCING_W && !o.alerted && minutes >= delayMin && starting && !o.graceLogged) {
+      o.graceLogged = true;
+      this._diag('info', 'comm', this._t('diag.startup_grace', { minutes }));
+    }
+    if (o.powerBefore >= PRODUCING_W && !o.alerted && minutes >= delayMin && !starting) {
       o.alerted = true;
       const msg = this._t('diag.comm_lost', { minutes, cause: causeText });
       this._diag('error', 'comm', msg);
@@ -668,11 +720,13 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       this._diagOnce('freq', RATE_LIMIT_MIN, 'warn', 'grid', this._t('diag.freq', { freq: d.frequency }));
     }
 
-    const tLimit = Number(this.getSetting('temp_alert')) || 80;
+    const tLimit = Number(this.getSetting('temp_alert')) || TEMP_ALERT_DEFAULT;
     if (d.temperature >= tLimit) {
       const msg = this._t('diag.temp', { temp: d.temperature, limit: tLimit });
       if (this._diagOnce('temp', RATE_LIMIT_MIN, 'warn', 'inverter', msg)) await this._notify('notify_alarm', msg);
     }
+
+    await this._checkDerating(d, now, tLimit);
 
     const dc = d.panels.reduce((sum, p) => sum + p.power, 0);
     if (dc > EFFICIENCY_MIN_DC_W && d.power / dc < EFFICIENCY_MIN) {
@@ -688,6 +742,33 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       await this._notify('notify_alarm', msg);
     }
     this.lastAlarmKey = alarmKey;
+  }
+
+  /**
+   * Thermal derating check. When hot, the inverter limits its power by moving the panels'
+   * operating point towards the open-circuit voltage: the power falls and the voltage rises at
+   * the same time on most panels. A passing cloud lowers the power without raising the voltage.
+   * Compared with the reading closest to 5 minutes earlier.
+   */
+  async _checkDerating(d, now, tLimit) {
+    this.history.push({ t: now, temp: d.temperature, panels: d.panels.map((p) => ({ p: p.power, v: p.voltage })) });
+    this.history = this.history.filter((h) => now - h.t <= DERATE_WINDOW_MS * 2);
+    if (d.temperature < tLimit - DERATE_TEMP_MARGIN) return false;
+    const ref = this.history.find((h) => now - h.t >= DERATE_WINDOW_MS);
+    if (!ref) return false;
+    const dcNow = d.panels.reduce((s, p) => s + p.power, 0);
+    const dcRef = ref.panels.reduce((s, p) => s + p.p, 0);
+    if (dcRef < DERATE_MIN_DC_W || dcNow > dcRef * (1 - DERATE_POWER_DROP)) return false;
+    const signature = d.panels.filter((p, i) => {
+      const r = ref.panels[i];
+      return r.p > 0 && r.v > 0 && p.power <= r.p * (1 - DERATE_POWER_DROP) && p.voltage >= r.v * (1 + DERATE_VOLTAGE_RISE);
+    }).length;
+    if (signature < DERATE_MIN_PANELS) return false;
+    const msg = this._t('diag.derating', {
+      temp: d.temperature, before: Math.round(dcRef), after: Math.round(dcNow), panels: signature,
+    });
+    if (this._diagOnce('derate', RATE_LIMIT_MIN, 'warn', 'inverter', msg)) await this._notify('notify_alarm', msg);
+    return true;
   }
 
   // ---------- Panel checks ----------

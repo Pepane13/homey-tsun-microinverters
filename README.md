@@ -2,7 +2,7 @@
 
 Fully local (cloud-free) monitoring of a TSUN TSOL-MX3000D micro-inverter through its Solarman LSW-5 Wi-Fi logger, using the Solarman V5 protocol (encapsulated Modbus RTU, TCP/8899). Read-only.
 
-## Features (v1.5.0)
+## Features (v1.5.1)
 
 - Solar panel in the Homey **Energy** tab (live production and cumulative meter)
 - Live power and daily yield **per panel**
@@ -24,6 +24,7 @@ Fully local (cloud-free) monitoring of a TSUN TSOL-MX3000D micro-inverter throug
 | `test/device.test.js` | Device tests (Homey mock + local fake V5 logger): `node test/device.test.js` |
 | `test/adaptive.test.js` | Adaptive panel monitoring tests (learned profile, shadows, anomalies, daily check): `node test/adaptive.test.js` |
 | `test/diagnostics.test.js` | Diagnostics tests (error classification, log, alerts, daily summary): `node test/diagnostics.test.js` |
+| `test/restart.test.js` | Restart and inverter checks (daytime restart, startup grace, thermal derating): `node test/restart.test.js` |
 | `test/widget.test.js` | Dashboard widget tests (data, manifest, rendering in Chromium if Playwright is installed): `node test/widget.test.js` |
 | `tsun_compare.js` | Detailed command-line reading using the app code: `node tsun_compare.js <logger_ip> <logger_sn> [interval_s]` |
 
@@ -82,4 +83,5 @@ node test/device.test.js
 node test/diagnostics.test.js
 node test/adaptive.test.js
 node test/widget.test.js
+node test/restart.test.js
 ```

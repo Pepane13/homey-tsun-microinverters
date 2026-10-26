@@ -1,6 +1,6 @@
 {
   "id": "com.pepane13.tsun",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "compatibility": ">=12.2.0",
   "sdk": 3,
   "platforms": [
@@ -480,9 +480,9 @@
                 "en": "Inverter temperature alert",
                 "fr": "Alerte température onduleur"
               },
-              "value": 80,
+              "value": 90,
               "min": 50,
-              "max": 100,
+              "max": 110,
               "units": {
                 "en": "°C",
                 "fr": "°C"

@@ -83,6 +83,7 @@ function setRegs({
   let day = '2026-10-23';
   d._todayKey = () => day;
   await d.onInit();
+  ok(d.settings.temp_alert === 90 && !!lastLog(/raised from 80 to 90/), 'v1.5.1 migration: temperature alert 80 -> 90 °C');
   ok(manifest.capabilities.includes('tsun_latency.logger') && 'tsun_ratio.comm' in d.caps, 'capabilities: response time and communication success added');
 
   setRegs({});
@@ -137,6 +138,9 @@ function setRegs({
   state.up = false;
   await d._poll();
   d.comm.outage.start -= 11 * 60000; // simulate 11 minutes
+  await d._poll();
+  ok(trig('comm_lost').length === 0 && !!lastLog(/just after the app started/), 'startup grace: no alert in the first 15 min (network restarting)');
+  d.startedAt -= 20 * 60000; // the app has been running for 20 min
   await d._poll();
   ok(trig('comm_lost').length === 1 && /closed by the logger/.test(trig('comm_lost')[0].tokens.cause), 'outage > 10 min during production: comm_lost Flow with cause');
   ok(mock._notifications.some((n) => /unreachable for 11 min/.test(n)), 'outage: timeline notification sent');
@@ -193,9 +197,9 @@ function setRegs({
   await d._poll();
   ok(logs('warn').filter((e) => /Grid voltage high: 255.2 V/.test(e.m)).length === 1, 'grid overvoltage logged once (rate limited)');
   ok(mock._notifications.length === n1, 'grid notification off by default');
-  setRegs({ temp: 85 });
+  setRegs({ temp: 92 });
   await d._poll();
-  ok(!!lastLog(/High inverter temperature: 85/) && mock._notifications.some((n) => /85/.test(n)), 'high temperature: warning and notification');
+  ok(!!lastLog(/High inverter temperature: 92 °C \(limit 90/) && mock._notifications.some((n) => /92/.test(n)), 'high temperature: warning and notification');
   setRegs({ ac: 1500 });
   await d._poll();
   ok(!!lastLog(/Low conversion efficiency: 70\.7 %/), 'low DC→AC efficiency logged');
