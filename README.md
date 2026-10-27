@@ -28,6 +28,7 @@ Fully local (cloud-free) monitoring of a TSUN TSOL-MX3000D micro-inverter throug
 | `test/restart.test.js` | Restart and inverter checks (daytime restart, startup grace, thermal derating): `node test/restart.test.js` |
 | `test/forecast.test.js` | Production forecast tests (Open-Meteo parsing, calibration, accuracy, Flow cards): `node test/forecast.test.js` |
 | `test/widget.test.js` | Dashboard widget tests (data, manifest, rendering in Chromium if Playwright is installed): `node test/widget.test.js` |
+| `install.cmd` | Windows installer: Node.js and Homey CLI checks, git pull, `homey app install` (double-click) |
 | `tsun_compare.js` | Detailed command-line reading using the app code: `node tsun_compare.js <logger_ip> <logger_sn> [interval_s]` |
 
 ## Registers used (function 0x03, slave 1)
@@ -46,6 +47,10 @@ Fully local (cloud-free) monitoring of a TSUN TSOL-MX3000D micro-inverter throug
 Register map taken from the [tsun-gen3-proxy](https://github.com/s-allius/tsun-gen3-proxy) wiki and validated on a real installation (V×I consistency, DC→AC efficiency ≈ 94.5 %, DC/AC totals ≈ 95 %).
 
 ## Installing the app
+
+On Windows, double-click **`install.cmd`** at the root of the repository: it checks Node.js (installs it with winget if missing), installs the Homey CLI if needed, runs `git pull` on a git clone, then `homey app install` (with `homey login` / `homey select` when needed). It runs in cmd, so the PowerShell execution policy ("running scripts is disabled on this system") does not get in the way.
+
+Manual equivalent:
 
 ```powershell
 npm install -g homey

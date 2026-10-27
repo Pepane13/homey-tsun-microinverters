@@ -114,6 +114,10 @@ A failure is only treated as abnormal when the inverter was producing (> 30 W) j
 
 ## Installation (Homey Pro, from a Windows PC)
 
+**Quickest:** double-click `install.cmd` at the root of the repository (steps 1 to 3 below, run from cmd so the PowerShell execution policy cannot block the Homey CLI).
+
+If PowerShell answers *"running scripts is disabled on this system"* when you type `homey`, either use `install.cmd`, call `homey.cmd` instead of `homey`, or allow local scripts once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
 1. Install Node.js LTS:
    ```powershell
    winget install OpenJS.NodeJS.LTS
