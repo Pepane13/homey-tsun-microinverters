@@ -1,4 +1,4 @@
-# TSUN Micro-inverters (v1.4.1) — Homey app for TSUN MX3000D micro-inverters
+# TSUN Micro-inverters (v1.6.0) — Homey app for TSUN MX3000D micro-inverters
 
 **Fully local** monitoring of the MX3000D through its Solarman logger (V5 protocol, TCP/8899), with no cloud and no proxy. Read-only: no command is ever sent to the inverter.
 
@@ -18,6 +18,8 @@
 | Communication success over 1 h (`tsun_ratio.comm`) | measured | % |
 | Panels 1 to 6, power (`tsun_panel_power.pv1..6`) | 0x1304 + 7·n | W |
 | Panels 1 to 6, yield today (`tsun_panel_energy.pv1..6`) | 0x1305-0x1306 + 7·n | kWh |
+| Forecast today / remaining today / tomorrow (`tsun_energy.forecast_today`, `.forecast_remaining`, `.forecast_tomorrow`) — only when the forecast is enabled | Open-Meteo + calibration | kWh |
+| Forecast power of the current hour (`tsun_power.forecast`) — only when the forecast is enabled | Open-Meteo + calibration | W |
 
 ### Insights charts
 
@@ -42,6 +44,10 @@ Class `solarpanel`, a single `measure_power` (AC production, positive) and a sin
 | Communication with the inverter was lost | Trigger | minutes, probable cause |
 | Communication with the inverter was restored | Trigger | outage duration (min) |
 | A panel is / is not underperforming | Condition | — |
+| The production forecast was updated | Trigger | forecast today, remaining today, tomorrow (kWh) |
+| Forecast production [today/tomorrow] from [time] to [time] is / is not above [kWh] | Condition | — |
+| Get the forecast production [today/tomorrow] from [time] to [time] | Action (Advanced Flows) | forecast energy (kWh) |
+| Refresh the production forecast | Action | — |
 
 Detection, device settings "Panel monitoring":
 
@@ -52,6 +58,22 @@ Detection, device settings "Panel monitoring":
 - The app settings page shows the **learned profile** (hour by hour, per panel) and a **reset** button, to use after a change (pruned tree, cleaned or replaced panel).
 
 Minimum average power (80 W): no check at dawn or under heavy clouds. Back to normal above half the threshold (hysteresis).
+
+## Production forecast (optional)
+
+Off by default. Device settings **Production forecast**: enable it, then set the panel **tilt** (0° flat, 90° vertical), **orientation** (compass bearing: 90 east, 180 south, 270 west), optionally the **peak power** of the panels (0 = inverter rated power) and the **weather model** (*Best match* or Météo-France, ECMWF, ICON, GFS).
+
+How it works:
+
+- Every hour the app downloads from [Open-Meteo](https://open-meteo.com) the hourly forecast of the **global tilted irradiance** (sunlight on the plane of the panels, mean over the hour) and the air temperature, for yesterday, today and the next two days.
+- Raw model per hour: irradiance / 1000 × peak power × 0.85 × temperature factor (−0.4 %/°C of cell temperature), capped at the inverter rated power.
+- **Calibration on your own production**: at each hour change, the energy produced during the past hour (difference of the inverter daily counter) is compared with the raw model for that hour. For each hour of the day the app keeps a correction factor = moving average of the produced energy / moving average of the raw energy (about 10 days, so it follows the seasons). It absorbs the real peak power and losses, recurring shadows, orientation approximations and the systematic bias of the weather model at that hour. Until an hour has been learned on 7 days its factor is blended with the global factor. Not learned: night and dawn hours (< 3 % of the peak power), hours at the inverter limit (clipping), inconsistent samples (fault, snow), hours spanned by a communication gap.
+- **Day-ahead accuracy**: at midnight the forecast made the day before is compared with the yield (log category *forecast*); the average error is shown in the app settings and in the diagnostic report.
+- Changing the tilt, orientation or peak power restarts the calibration.
+
+Typical use with a home battery and EDF Tempo: on the eve of a red day, *Get the forecast production tomorrow from 06:00 to 22:00*, then charge the battery from the grid during off-peak hours only by the difference between the expected consumption and that forecast.
+
+Privacy: only the Homey location rounded to 2 decimals (about 1 km), the tilt, the orientation and the model are sent to `api.open-meteo.com` (free for non-commercial use, no account, no API key). Expect ±10–15 % on clear days and ±30 % or more with variable cloud cover.
 
 ## Diagnostics
 

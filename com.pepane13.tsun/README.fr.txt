@@ -10,6 +10,7 @@ Fonctions :
 - Cartes Flow : un panneau est sous-performant (par rapport à la moyenne des autres, seuil et durée réglables), un panneau est revenu à la normale, le statut de l'onduleur a changé
 - Diagnostic dans les réglages de l'app : analyse Wi-Fi avec cause probable, courbe du temps de réponse du logger, alertes de perte de communication, panneau qui ne produit pas, alertes tension réseau et température, bilan quotidien et journal de diagnostic copiable
 - Surveillance adaptative des panneaux : chaque panneau est comparé à sa propre production habituelle à cette heure, apprise automatiquement ; les ombrages récurrents ne déclenchent pas d'alerte
+- Prévision de production optionnelle : prévision météo horaire de l'ensoleillement de vos panneaux (Open-Meteo), calibrée automatiquement sur votre propre production. Prévision du jour, restant du jour et demain, et cartes Flow pour agir en conséquence (par exemple ne recharger une batterie domestique sur le réseau que si le soleil ne le fera pas)
 
 Compatibilité : validée sur le TSUN TSOL-MX3000D (6 entrées). Les autres modèles TSUN 6-en-1 utilisant la même table de registres devraient fonctionner mais n'ont pas été testés.
 
@@ -19,6 +20,8 @@ Avant d'ajouter l'appareil :
 - Ajoutez l'appareil en journée : l'onduleur est alimenté par les panneaux et s'éteint la nuit
 
 La nuit, l'onduleur ne répond plus : la production passe à 0, le statut indique « Veille (nuit) » et l'app l'interroge toutes les 5 minutes jusqu'au matin.
+
+La prévision de production est désactivée par défaut. Une fois activée, la position du Homey arrondie à environ 1 km ainsi que l'inclinaison et l'orientation des panneaux sont envoyées une fois par heure à api.open-meteo.com (service météo gratuit, sans compte) ; rien d'autre ne sort de votre réseau.
 
 Conseil de sécurité : le port du logger n'est protégé que par son numéro de série. Gardez le logger sur un réseau de confiance ou un VLAN IoT n'autorisant que Homey en TCP 8899, et changez le mot de passe par défaut de son interface web.
 

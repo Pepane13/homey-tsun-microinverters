@@ -16,7 +16,10 @@
     "invalid_sn": "Numéro de série du logger invalide (chiffres uniquement)",
     "empty_response": "Réponse vide de l'onduleur",
     "unreachable": "Logger injoignable. L'onduleur produit-il en ce moment ? Détail :",
-    "read_failed": "Échec de la lecture :"
+    "read_failed": "Échec de la lecture :",
+    "forecast_disabled": "La prévision de production est désactivée : activez-la dans les réglages de l'appareil (Prévision de production).",
+    "forecast_unavailable": "Pas encore de prévision de production pour ce jour (prévision météo non téléchargée).",
+    "forecast_window": "Plage horaire invalide : la fin doit être après le début (00:00 en fin signifie minuit)."
   },
   "pair": {
     "subtitle": "Connexion locale au logger Wi-Fi Solarman de l'onduleur (port TCP 8899). Ajoutez l'appareil en journée, onduleur en production.",
@@ -83,7 +86,15 @@
     "read_fail_repeated": "{count} lectures consécutives en échec alors que l'onduleur produisait {power} W : {cause} [{code}]",
     "temp_default_changed": "Alerte température relevée de 80 à {limit} °C (nouvelle valeur par défaut : 80 °C est normal pour cet onduleur par beau temps)",
     "startup_grace": "Onduleur injoignable depuis {minutes} min juste après le démarrage de l'app (Homey ou réseau en cours de redémarrage) : pas encore d'alerte",
-    "derating": "Bridage thermique probable à {temp} °C : puissance DC passée de {before} à {after} W en 5 min alors que la tension a monté sur {panels} panneaux"
+    "derating": "Bridage thermique probable à {temp} °C : puissance DC passée de {before} à {after} W en 5 min alors que la tension a monté sur {panels} panneaux",
+    "forecast_updated": "Prévision mise à jour : aujourd'hui {today} kWh (restant {remaining} kWh), demain {tomorrow} kWh",
+    "forecast_failed": "Échec du téléchargement de la prévision météo : {message}. Nouvel essai dans 15 min.",
+    "forecast_restored": "Prévision météo de nouveau téléchargée",
+    "forecast_no_location": "Position du Homey inconnue (à régler dans Réglages Homey → Localisation)",
+    "forecast_learn": "Calibrage {hour}h : {actual} kWh produits, {forecast} kWh prévus, facteur désormais {factor}",
+    "forecast_day": "Prévision du {day} (faite la veille) : {forecast} kWh, produit {actual} kWh ({error} %) ; erreur moyenne sur {days} jours : {mape} %",
+    "forecast_day_dull": "Prévision du {day} (faite la veille) : {forecast} kWh, produit {actual} kWh (journée trop sombre pour évaluer la précision)",
+    "forecast_recalibrate": "Plan des panneaux ou puissance crête modifié : calibrage de la prévision relancé"
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostic",
@@ -142,7 +153,17 @@
     "bl_reset": "Réinitialiser l'apprentissage",
     "bl_confirm": "Réinitialiser le profil appris de cet onduleur ? À faire après un changement (arbre élagué, panneau nettoyé ou remplacé). Les alertes de sous-performance reprendront une fois les tranches horaires réapprises (3 jours ensoleillés).",
     "bl_empty": "Rien d'appris pour l'instant : le profil se construit pendant que les panneaux produisent.",
-    "st_retries": "Nouvelles tentatives / échecs isolés aujourd'hui"
+    "st_retries": "Nouvelles tentatives / échecs isolés aujourd'hui",
+    "st_forecast": "Prévision de production",
+    "st_forecast_today": "aujourd'hui",
+    "st_forecast_remaining": "restant",
+    "st_forecast_tomorrow": "demain",
+    "st_forecast_calib": "Calibrage de la prévision",
+    "st_forecast_samples": "heures apprises",
+    "st_forecast_factor": "facteur",
+    "st_forecast_error": "erreur moyenne à J-1",
+    "st_forecast_days": "jours",
+    "st_forecast_fetched": "téléchargée"
   },
   "widget": {
     "today": "Aujourd'hui",
@@ -156,6 +177,7 @@
     "of": "de",
     "expected": "production habituelle à cette heure",
     "no_device": "Aucun onduleur TSUN ajouté",
-    "dc": "Panneaux (DC)"
+    "dc": "Panneaux (DC)",
+    "forecast": "Prévision (reste / jour)"
   }
 }

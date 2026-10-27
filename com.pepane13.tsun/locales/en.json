@@ -16,7 +16,10 @@
     "invalid_sn": "Invalid logger serial number (digits only)",
     "empty_response": "Empty response from the inverter",
     "unreachable": "Logger unreachable. Is the inverter producing right now? Details:",
-    "read_failed": "Read failed:"
+    "read_failed": "Read failed:",
+    "forecast_disabled": "The production forecast is off: enable it in the device settings (Production forecast).",
+    "forecast_unavailable": "No production forecast available for that day yet (weather forecast not downloaded).",
+    "forecast_window": "Invalid time range: the end must be after the start (00:00 as the end means midnight)."
   },
   "pair": {
     "subtitle": "Local connection to the inverter's Solarman Wi-Fi logger (TCP port 8899). Add the device during daytime, while the inverter is producing.",
@@ -83,7 +86,15 @@
     "read_fail_repeated": "{count} consecutive failed reads while the inverter was producing {power} W: {cause} [{code}]",
     "temp_default_changed": "Temperature alert raised from 80 to {limit} °C (new default: 80 °C is normal for this inverter on sunny days)",
     "startup_grace": "Inverter unreachable for {minutes} min just after the app started (Homey or network restarting): no alert yet",
-    "derating": "Possible thermal derating at {temp} °C: DC power down from {before} to {after} W in 5 min while the panel voltage rose on {panels} panels"
+    "derating": "Possible thermal derating at {temp} °C: DC power down from {before} to {after} W in 5 min while the panel voltage rose on {panels} panels",
+    "forecast_updated": "Forecast updated: today {today} kWh (remaining {remaining} kWh), tomorrow {tomorrow} kWh",
+    "forecast_failed": "Weather forecast download failed: {message}. Next attempt in 15 min.",
+    "forecast_restored": "Weather forecast downloaded again",
+    "forecast_no_location": "Homey location unknown (set it in Homey settings → Location)",
+    "forecast_learn": "Calibration {hour}h: {actual} kWh produced, {forecast} kWh forecast, factor now {factor}",
+    "forecast_day": "Forecast of {day} (made the day before): {forecast} kWh, produced {actual} kWh ({error} %); average error over {days} days: {mape} %",
+    "forecast_day_dull": "Forecast of {day} (made the day before): {forecast} kWh, produced {actual} kWh (day too dull to assess the accuracy)",
+    "forecast_recalibrate": "Panel plane or peak power changed: forecast calibration restarted"
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostics",
@@ -142,7 +153,17 @@
     "bl_reset": "Reset the learning",
     "bl_confirm": "Reset the learned profile of this inverter? Use it after a change (pruned tree, cleaned or replaced panel). Underperformance alerts resume once the time slots have been learned again (3 sunny days).",
     "bl_empty": "Nothing learned yet: the profile builds up while the panels produce.",
-    "st_retries": "Retries / isolated failures today"
+    "st_retries": "Retries / isolated failures today",
+    "st_forecast": "Production forecast",
+    "st_forecast_today": "today",
+    "st_forecast_remaining": "remaining",
+    "st_forecast_tomorrow": "tomorrow",
+    "st_forecast_calib": "Forecast calibration",
+    "st_forecast_samples": "hours learned",
+    "st_forecast_factor": "factor",
+    "st_forecast_error": "average day-ahead error",
+    "st_forecast_days": "days",
+    "st_forecast_fetched": "downloaded"
   },
   "widget": {
     "today": "Today",
@@ -156,6 +177,7 @@
     "of": "of",
     "expected": "usual production at this time",
     "no_device": "No TSUN inverter added yet",
-    "dc": "Panels (DC)"
+    "dc": "Panels (DC)",
+    "forecast": "Forecast (left / day)"
   }
 }

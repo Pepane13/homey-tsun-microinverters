@@ -3,6 +3,7 @@ const path = require('path');
 const en = require('../com.pepane13.tsun/locales/en.json');
 
 const trig = [];
+const listeners = {}; // Flow card run listeners registered by the driver
 const notifications = [];
 const appSettings = {};
 const realtime = [];
@@ -20,9 +21,14 @@ const homey = {
   clearTimeout() {},
   settings,
   notifications: { createNotification: async ({ excerpt }) => notifications.push(excerpt) },
-  flow: { getDeviceTriggerCard: (id) => ({ trigger: async (dev, tokens) => trig.push({ id, tokens }) }) },
+  flow: {
+    getDeviceTriggerCard: (id) => ({ trigger: async (dev, tokens) => trig.push({ id, tokens }) }),
+    getConditionCard: (id) => ({ registerRunListener: (f) => { listeners[`condition:${id}`] = f; } }),
+    getActionCard: (id) => ({ registerRunListener: (f) => { listeners[`action:${id}`] = f; } }),
+  },
   manifest: { version: 'test' },
   api: { realtime: (event, data) => realtime.push({ event, data }) },
+  geolocation: { getLatitude: () => 43.3567, getLongitude: () => 5.3123 },
 };
 
 class Device {
@@ -37,6 +43,7 @@ class Device {
   hasCapability(c) { return c in this.caps; }
   async addCapability(c) { this.caps[c] = null; }
   async removeCapability(c) { delete this.caps[c]; }
+  async setCapabilityOptions(c, o) { (this.capOptions = this.capOptions || {})[c] = o; }
   getCapabilityValue(c) { return this.caps[c] ?? null; }
   async setCapabilityValue(c, v) { if (!(c in this.caps)) throw new Error(`nocap ${c}`); this.caps[c] = v; }
   getStoreValue(k) { return this.store[k]; }
@@ -58,4 +65,4 @@ class Device {
 const { DiagLog } = require(path.join(__dirname, '..', 'com.pepane13.tsun', 'lib', 'diaglog'));
 homey.app = { diag: new DiagLog(homey) };
 
-module.exports = { Device, Driver: class {}, App: class {}, _trig: trig, _notifications: notifications, _homey: homey, _settings: appSettings, _realtime: realtime };
+module.exports = { Device, Driver: class {}, App: class {}, _trig: trig, _listeners: listeners, _notifications: notifications, _homey: homey, _settings: appSettings, _realtime: realtime };

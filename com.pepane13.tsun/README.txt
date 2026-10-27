@@ -10,6 +10,7 @@ What you get:
 - Flow cards: a panel is underperforming (compared with the average of the others, with adjustable threshold and duration), a panel is back to normal, the inverter status changed
 - Diagnostics in the app settings: Wi-Fi analysis with probable cause, logger response time chart, communication loss alerts, panels not producing, grid voltage and temperature warnings, daily summary, and a diagnostic log you can copy
 - Adaptive panel monitoring: each panel is compared with its own usual production at that time of day, learned automatically, so recurring shadows do not raise alerts
+- Optional production forecast: hourly weather forecast of the sunlight on your panels (Open-Meteo), calibrated automatically on your own production. Forecast today, remaining today and tomorrow, plus Flow cards to act on it (e.g. charge a home battery from the grid only when the sun will not do it)
 
 Compatibility: validated on the TSUN TSOL-MX3000D (6 inputs). Other TSUN 6-in-1 models using the same register map should work but have not been tested.
 
@@ -19,6 +20,8 @@ Before adding the device:
 - Add the device during daytime: the inverter is powered by the panels and switches off at night
 
 At night the inverter is unreachable: production drops to 0, the status shows "Standby (night)" and the app polls every 5 minutes until the morning.
+
+The production forecast is off by default. When you enable it, the Homey location rounded to about 1 km and the panel tilt and orientation are sent once an hour to api.open-meteo.com (free weather service, no account); nothing else leaves your network.
 
 Security tip: the logger port is only protected by its serial number. Keep the logger on a trusted network or an IoT VLAN that only allows Homey to reach it on TCP 8899, and change the logger web interface default password.
 

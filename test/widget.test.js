@@ -101,6 +101,28 @@ function setRegs(pv) {
     ok(r.names.join(',') === 'PV5,PV4,PV2,PV6,PV1,PV3', `panels in the configured order: ${r.names.join(',')}`);
     ok(r.chips === 8 && /400|399/.test(r.power), `top band: ${r.chips} values, power ${r.power}`);
     ok(r.h > 300 && r.h < 800, `widget height reported to Homey: ${r.h} px`);
+
+    // Forecast enabled: one more value in the top band, after the total
+    await page.setContent(html.replace('<body', '<body style="padding:16px"'));
+    const fdata = { ...data, device: { ...wd, forecast: { today: 9.4, remaining: 3.1, tomorrow: 11.2 } } };
+    await page.evaluate((payload) => {
+      window.__h = null;
+      window.onHomeyReady({
+        getSettings: () => ({ order: '1,2,3,4,5,6', columns: '3', panel_max: 500, device: 1 }),
+        ready: ({ height }) => { window.__h = height; },
+        setHeight: (h) => { window.__h = h; },
+        api: () => Promise.resolve(payload),
+        on: () => {},
+      });
+    }, fdata);
+    await page.waitForFunction(() => window.__h !== null);
+    const rf = await page.evaluate(() => ({
+      h: window.__h,
+      chips: [...document.querySelectorAll('.chip')].map((c) => c.textContent.replace(/\s+/g, ' ').trim()),
+    }));
+    ok(rf.chips.length === 9 && /Forecast.*3[.,]1 \/ 9[.,]4 kWh/.test(rf.chips[2]), `forecast in the top band: "${rf.chips[2]}"`);
+    ok(rf.h > 300 && rf.h < 800, `widget height with the forecast: ${rf.h} px`);
+    if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT, fullPage: true });
     await browser.close();
   }
 

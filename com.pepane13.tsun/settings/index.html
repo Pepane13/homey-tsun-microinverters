@@ -148,6 +148,16 @@
               [__('st_last_error'), d.lastError ? `${fmtTime(d.lastError.t)} — ${esc(d.lastError.text)} [${esc(d.lastError.code || '?')}]` : __('none')],
               [__('st_panels'), panels.length ? `<span class="bad">${panels.join(', ')}</span>` : __('none')],
             ];
+            const f = d.forecast;
+            if (f) {
+              const kwh = (x) => (x == null ? '—' : `${x} kWh`);
+              rows.push([__('st_forecast'), `${__('st_forecast_today')} ${kwh(f.today)} (${__('st_forecast_remaining')} ${kwh(f.remaining)}) · `
+                + `${__('st_forecast_tomorrow')} ${kwh(f.tomorrow)}<br><span class="muted">${__('st_forecast_fetched')} ${fmtTime(f.fetchedAt)}</span>`
+                + (f.error ? `<br><span class="warn">${esc(f.error.message)}</span>` : '')]);
+              const acc = f.accuracy && f.accuracy.mape != null
+                ? ` · ${__('st_forecast_error')} ±${f.accuracy.mape} % (${f.accuracy.days} ${__('st_forecast_days')})` : '';
+              rows.push([__('st_forecast_calib'), `${f.samples} ${__('st_forecast_samples')} · ${__('st_forecast_factor')} ${f.globalFactor}${acc}`]);
+            }
             return `<div class="status-card"><h3>${esc(d.name)} <span class="muted">${esc(d.host)}</span></h3><table>${
               rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table></div>`;
           }).join('') || `<p class="muted">${__('empty')}</p>`;

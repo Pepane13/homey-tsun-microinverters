@@ -115,6 +115,9 @@
           [L.efficiency, d.efficiency != null ? `${num(d.efficiency, 1)} %` : '—'],
           [L.wifi, `${d.latency != null ? `${num(d.latency)} ms` : '—'} · ${d.successRate != null ? `${num(d.successRate)} %` : '—'}`, slow || lowRate],
         ];
+        if (d.forecast) {
+          chips.splice(2, 0, [L.forecast || 'Forecast', `${num(d.forecast.remaining, 1)} / ${num(d.forecast.today, 1)} kWh`]);
+        }
 
         const byN = Object.fromEntries(d.panels.map((p) => [p.n, p]));
         const list = (order.length ? order : [1, 2, 3, 4, 5, 6]).map((n) => byN[n]).filter(Boolean);

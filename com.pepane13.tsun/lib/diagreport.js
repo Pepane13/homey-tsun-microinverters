@@ -72,6 +72,18 @@ function buildReport(p) {
         + `daily share ${bl.daily.share.join('/')} % (${bl.daily.days} days)`);
       bl.hours.forEach((h) => L.push(`  ${String(h.hour).padStart(2, '0')}h ${h.ratios.map((v) => String(v ?? '—').padStart(4)).join('')}${h.ready ? '' : '  (learning)'}`));
     }
+    const fc = d.forecast;
+    if (fc) {
+      const c = fc.calibration || {};
+      L.push(`Production forecast: today ${fc.today ?? '—'} kWh (remaining ${fc.remaining ?? '—'}), tomorrow ${fc.tomorrow ?? '—'} kWh; `
+        + `downloaded ${fmtDate(fc.fetchedAt, tz)}${fc.error ? `; last error ${fmtDate(fc.error.t, tz)} ${fc.error.message}` : ''}`);
+      const acc = c.accuracy || {};
+      L.push(`Forecast calibration: ${c.samples ?? 0} hours learned since ${c.since || '—'}, global factor ${c.globalFactor ?? '—'}; `
+        + `day-ahead error ${acc.mape ?? '—'} % (bias ${acc.bias ?? '—'} %, ${acc.days ?? 0} days)`);
+      if (Array.isArray(c.hours) && c.hours.length) {
+        L.push(`  hour factors: ${c.hours.map((h) => `${String(h.hour).padStart(2, '0')}h ${h.factor ?? '—'} (${h.days} d)`).join(', ')}`);
+      }
+    }
     const other = Object.entries(set).filter(([k]) => !['host', 'logger_sn', 'inverter_sn', 'poll_interval'].includes(k));
     if (other.length) L.push(`Settings: ${other.map(([k, v]) => `${k}=${v}`).join(', ')}`);
   }

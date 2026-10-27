@@ -8,6 +8,16 @@ module.exports = class Mx3000dDriver extends Homey.Driver {
   async onInit() {
     this.homey.flow.getConditionCard('any_underperforming')
       .registerRunListener(({ device }) => device.isUnderperforming());
+    this.homey.flow.getConditionCard('forecast_window_above')
+      .registerRunListener(({
+        device, day, start, end, threshold,
+      }) => device.forecastWindow(day, start, end) > Number(threshold));
+    this.homey.flow.getActionCard('forecast_get_window')
+      .registerRunListener(async ({
+        device, day, start, end,
+      }) => ({ energy: device.forecastWindow(day, start, end) }));
+    this.homey.flow.getActionCard('forecast_refresh')
+      .registerRunListener(({ device }) => device.refreshForecast());
     this.log('MX3000D driver initialised');
   }
 

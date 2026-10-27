@@ -5,6 +5,10 @@ const { SolarmanV5Client } = require('../../lib/solarmanv5');
 const { readAll } = require('../../lib/mx3000d');
 const { maskSerial } = require('../../lib/diagreport');
 const { PanelBaseline } = require('../../lib/panelbaseline');
+const {
+  SolarForecast, localParts, nextDay, parseTime,
+} = require('../../lib/forecast');
+const { buildPath, getJson } = require('../../lib/openmeteo');
 
 const PANELS = 6;
 const STANDBY_AFTER_FAILURES = 3; // consecutive failures before the inverter is considered in standby
@@ -35,6 +39,20 @@ const DERATE_VOLTAGE_RISE = 0.04; // ...while the voltage rises by at least 4 %.
 const DERATE_MIN_PANELS = 4; // ...on at least 4 of the 6 panels
 const DERATE_MIN_DC_W = 600; // only with a significant production
 const DERATE_TEMP_MARGIN = 15; // and an inverter temperature within 15 °C of the alert limit
+// Production forecast (optional, lib/forecast.js)
+const HOUR_MS = SolarForecast.HOUR_MS;
+const FORECAST_REFRESH_MIN = 60; // weather forecast refreshed every hour
+const FORECAST_RETRY_MIN = 15; // after a failed request
+const FORECAST_SAVE_MS = 15 * 60 * 1000; // calibration saved at most every 15 min
+const DEFAULT_RATED_W = 3000;
+const FORECAST_RECALIBRATE_KEYS = ['forecast_tilt', 'forecast_azimuth', 'forecast_peak'];
+// Capabilities added only while the forecast is enabled
+const FORECAST_CAPS = {
+  'tsun_energy.forecast_today': { en: 'Forecast today', fr: 'Prévision du jour' },
+  'tsun_energy.forecast_remaining': { en: 'Forecast remaining today', fr: 'Prévision restante du jour' },
+  'tsun_energy.forecast_tomorrow': { en: 'Forecast tomorrow', fr: 'Prévision de demain' },
+  'tsun_power.forecast': { en: 'Forecast power (this hour)', fr: 'Puissance prévue (heure en cours)' },
+};
 
 // Capabilities from earlier versions, replaced by tsun_* capabilities
 // (Homey Energy must only see one measure_power and one meter_power)
@@ -122,6 +140,12 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     this._restoreDayStats();
     this.baseline = new PanelBaseline(PANELS, this.getStoreValue('panelBaseline'));
     this.baselineSavedAt = Date.now();
+    this.forecast = new SolarForecast(this.getStoreValue('forecastModel'));
+    this.forecastSavedAt = Date.now();
+    this.forecastMeter = null; // { hourStart, value, valid }: daily counter at the start of the current hour
+    this.forecastTimer = null;
+    this.forecastError = null;
+    this.ratedPower = Number(this.getStoreValue('ratedPower')) || null;
 
     await this._migrateCapabilities();
     await this._migrateSettings();
@@ -132,9 +156,11 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     this.triggerStatus = this.homey.flow.getDeviceTriggerCard('status_changed');
     this.triggerCommLost = this.homey.flow.getDeviceTriggerCard('comm_lost');
     this.triggerCommRestored = this.homey.flow.getDeviceTriggerCard('comm_restored');
+    this.triggerForecast = this.homey.flow.getDeviceTriggerCard('forecast_updated');
 
     this._diag('info', 'app', `${this._t('diag.device_started')} ${this.getSetting('host')}`);
     this._schedule(1);
+    await this._forecastSetup();
   }
 
   async _migrateCapabilities() {
@@ -187,6 +213,17 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       for (const w of [...this.panelWatch, ...this.zeroWatch]) w.since = null; // restart the duration measurement
     }
     this._diag('info', 'app', this._t('diag.settings_changed', { keys: changedKeys.join(', ') }));
+    if (changedKeys.some((k) => k.startsWith('forecast_'))) {
+      if (changedKeys.some((k) => FORECAST_RECALIBRATE_KEYS.includes(k)) && this.forecast.global.n > 0) {
+        // the learned factors are relative to the raw model of the old plane / peak power
+        this.forecast.resetCalibration();
+        this._diag('info', 'forecast', this._t('diag.forecast_recalibrate'));
+        await this._saveForecast(true);
+        await this._forecastPublish();
+      }
+      // applied once the new settings are stored
+      this.homey.setTimeout(() => this._forecastSetup().catch((err) => this.error('Forecast setup:', err.message)), 1000);
+    }
     this.failures = 0;
     this.standby = false;
     this._schedule(2);
@@ -194,12 +231,15 @@ module.exports = class Mx3000dDevice extends Homey.Device {
 
   async onUninit() {
     this._clear();
+    this._clearForecastTimer();
     await this._saveDayStats(true);
     await this._saveBaseline(true);
+    await this._saveForecast(true);
   }
 
   async onDeleted() {
     this._clear();
+    this._clearForecastTimer();
   }
 
   _clear() {
@@ -299,6 +339,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       lastError: this.comm.lastError,
       panelsUnderperforming: this.panelWatch.map((w, i) => (w.flagged ? i + 1 : null)).filter(Boolean),
       panelsNotProducing: this.zeroWatch.map((w, i) => (w.flagged ? i + 1 : null)).filter(Boolean),
+      forecast: this._forecastEnabled() ? this._forecastStatus(now) : null,
     };
   }
 
@@ -318,6 +359,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       settings,
       values,
       baseline: this.getBaselineSummary(),
+      forecast: this._forecastEnabled() ? { ...this._forecastStatus(), calibration: this.forecast.summary() } : null,
       today: {
         ...this.dayStats,
         peakAt: this.dayStats.peakAt ? new Date(this.dayStats.peakAt).toISOString() : null,
@@ -368,6 +410,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
 
     this._logDailySummary(lastDay);
     await this._checkDailyShares(lastDay);
+    await this._forecastDayCheck(lastDay);
 
     const stale = {};
     for (const [key, cap] of Object.entries(this._todayCaps())) {
@@ -687,6 +730,12 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     }
     if (Object.keys(stale).length !== before) await this.setStoreValue('staleToday', stale);
 
+    if (d.ratedPower >= 300 && d.ratedPower <= 10000 && d.ratedPower !== this.ratedPower) {
+      this.ratedPower = d.ratedPower;
+      await this.setStoreValue('ratedPower', d.ratedPower).catch(this.error);
+    }
+    await this._forecastMeter(Date.now());
+
     await this._checkInverter(d);
     await this._checkPanels(d.panels.map((p) => p.power), Date.now(), d.panels.map((p) => p.voltage));
 
@@ -972,6 +1021,11 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       peak: this.dayStats.peak ? Math.round(this.dayStats.peak) : null,
       peakAt: this.dayStats.peakAt ? this._time(this.dayStats.peakAt) : null,
       lastRead: this.comm.lastOk ? this._time(this.comm.lastOk.t) : null,
+      forecast: this._forecastEnabled() ? {
+        today: v('tsun_energy.forecast_today'),
+        remaining: v('tsun_energy.forecast_remaining'),
+        tomorrow: v('tsun_energy.forecast_tomorrow'),
+      } : null,
       panels,
     };
   }
@@ -990,6 +1044,236 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     for (const w of this.panelWatch) { w.since = null; w.flagged = false; }
     await this._saveBaseline(true);
     this._diag('info', 'panel', this._t('diag.baseline_reset'));
+  }
+
+  // ---------- Production forecast ----------
+  // Optional (off by default, device settings "Production forecast"): hourly weather forecast of
+  // the irradiance on the panel plane (Open-Meteo, Homey location rounded to about 1 km),
+  // calibrated hour by hour on the measured production (lib/forecast.js).
+
+  _forecastEnabled() {
+    return this.getSetting('forecast_enabled') === true;
+  }
+
+  _forecastCtx() {
+    const rated = Number(this.ratedPower) || DEFAULT_RATED_W;
+    const peak = Number(this.getSetting('forecast_peak')) || rated; // 0 = inverter rated power
+    return { peakKw: peak / 1000, ratedKw: rated / 1000, timeZone: this.homey.clock.getTimezone() };
+  }
+
+  _clearForecastTimer() {
+    if (this.forecastTimer) this.homey.clearTimeout(this.forecastTimer);
+    this.forecastTimer = null;
+  }
+
+  _scheduleForecast(seconds) {
+    this._clearForecastTimer();
+    this.forecastTimer = this.homey.setTimeout(() => {
+      this._fetchForecast().catch((err) => this.error('Forecast:', err.message));
+    }, seconds * 1000);
+  }
+
+  /** Adds or removes the forecast capabilities and starts or stops the hourly refresh. */
+  async _forecastSetup() {
+    if (!this._forecastEnabled()) {
+      this._clearForecastTimer();
+      this.forecastMeter = null;
+      for (const cap of Object.keys(FORECAST_CAPS)) {
+        if (this.hasCapability(cap)) await this.removeCapability(cap).catch(this.error);
+      }
+      return;
+    }
+    for (const [cap, title] of Object.entries(FORECAST_CAPS)) {
+      if (this.hasCapability(cap)) continue;
+      await this.addCapability(cap).catch(this.error);
+      if (typeof this.setCapabilityOptions === 'function') {
+        await this.setCapabilityOptions(cap, { title }).catch(this.error);
+      }
+    }
+    this._scheduleForecast(3);
+  }
+
+  /** Overridable for the tests. */
+  _getForecastJson(path) {
+    return getJson(path);
+  }
+
+  /** Downloads the weather forecast, publishes the values and schedules the next refresh. */
+  async _fetchForecast() {
+    this.forecastTimer = null;
+    if (!this._forecastEnabled()) return false;
+    let success = false;
+    try {
+      const lat = Number(this.homey.geolocation.getLatitude());
+      const lon = Number(this.homey.geolocation.getLongitude());
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || (lat === 0 && lon === 0)) {
+        throw Object.assign(new Error(this._t('diag.forecast_no_location')), { code: 'ENOLOCATION' });
+      }
+      const tilt = Number(this.getSetting('forecast_tilt'));
+      const azimuth = Number(this.getSetting('forecast_azimuth'));
+      const path = buildPath({
+        lat,
+        lon,
+        tilt: Number.isFinite(tilt) ? tilt : 30,
+        azimuth: Number.isFinite(azimuth) ? azimuth : 180,
+        model: this.getSetting('forecast_model') || 'best_match',
+      });
+      const json = await this._getForecastJson(path);
+      const now = Date.now();
+      this.forecast.setSeries(SolarForecast.parse(json), now);
+      const ctx = this._forecastCtx();
+      const tomorrow = nextDay(localParts(now, ctx.timeZone).day);
+      this.forecast.recordDayAhead(tomorrow, this.forecast.dayTotal(tomorrow, ctx));
+      if (this.forecastError) this._diag('info', 'forecast', this._t('diag.forecast_restored'));
+      this.forecastError = null;
+      success = true;
+      await this._forecastPublish(now, true);
+      const s = this._forecastStatus(now);
+      this._diag('debug', 'forecast', this._t('diag.forecast_updated', {
+        today: s.today ?? '—', remaining: s.remaining ?? '—', tomorrow: s.tomorrow ?? '—',
+      }));
+      await this._saveForecast(true);
+    } catch (err) {
+      this.forecastError = { t: new Date().toISOString(), message: err.message };
+      this._diagOnce('forecast_fail', 60, 'warn', 'forecast', this._t('diag.forecast_failed', { message: err.message }));
+      await this._forecastPublish(Date.now()).catch(this.error); // keep the values of the last forecast up to date
+    }
+    if (this._forecastEnabled()) this._scheduleForecast((success ? FORECAST_REFRESH_MIN : FORECAST_RETRY_MIN) * 60);
+    return success;
+  }
+
+  async _setNullable(cap, value) {
+    if (!this.hasCapability(cap) || this.getCapabilityValue(cap) === value) return;
+    await this.setCapabilityValue(cap, value).catch((err) => this.error(`${cap}:`, err.message));
+  }
+
+  /** Current forecast values (kWh, W), null where the forecast does not cover the period. */
+  _forecastValues(now = Date.now()) {
+    const ctx = this._forecastCtx();
+    const today = localParts(now, ctx.timeZone).day;
+    const r = (x, d = 2) => (x === null ? null : round(x, d));
+    return {
+      today: r(this.forecast.dayTotal(today, ctx)),
+      remaining: r(this.forecast.remaining(now, ctx)),
+      tomorrow: r(this.forecast.dayTotal(nextDay(today), ctx)),
+      power: r(this.forecast.powerAt(now, ctx), 0),
+    };
+  }
+
+  async _forecastPublish(now = Date.now(), fetched = false) {
+    if (!this._forecastEnabled()) return;
+    const v = this._forecastValues(now);
+    await this._setNullable('tsun_energy.forecast_today', v.today);
+    await this._setNullable('tsun_energy.forecast_remaining', v.remaining);
+    await this._setNullable('tsun_energy.forecast_tomorrow', v.tomorrow);
+    await this._setNullable('tsun_power.forecast', v.power);
+    if (fetched && v.today !== null && v.remaining !== null && v.tomorrow !== null) {
+      await this.triggerForecast.trigger(this, { today: v.today, remaining: v.remaining, tomorrow: v.tomorrow })
+        .catch(this.error);
+    }
+  }
+
+  /**
+   * Called after each successful read: at each hour change, the energy produced during the past
+   * hour (daily counter difference) is compared with the forecast to calibrate the model.
+   */
+  async _forecastMeter(now) {
+    if (!this._forecastEnabled()) return;
+    const hourStart = Math.floor(now / HOUR_MS) * HOUR_MS;
+    const value = Number(this.getCapabilityValue('tsun_energy.today')) || 0;
+    const m = this.forecastMeter;
+    if (!m || m.hourStart !== hourStart) {
+      const consecutive = !!m && m.hourStart === hourStart - HOUR_MS;
+      if (consecutive && m.valid) {
+        const delta = value >= m.value ? value - m.value : value; // daily counter reset (midnight or morning)
+        const res = this.forecast.learnHour(m.hourStart, delta, this._forecastCtx());
+        if (res.learned) {
+          this._diag('debug', 'forecast', this._t('diag.forecast_learn', {
+            hour: res.hour, actual: round(delta, 2), forecast: round(res.forecast, 2), factor: res.factor,
+          }));
+          await this._saveForecast();
+        }
+      }
+      // After a gap (night standby, outage, restart) the counter at the start of the hour is unknown,
+      // except when the inverter woke up during this hour: its daily counter then started from 0.
+      const wokeThisHour = !!this.dayStats.wake && this.dayStats.wake >= hourStart;
+      this.forecastMeter = consecutive
+        ? { hourStart, value, valid: true }
+        : { hourStart, value: wokeThisHour ? 0 : value, valid: wokeThisHour };
+    }
+    await this._forecastPublish(now);
+  }
+
+  /** Day change: day-ahead forecast of the finished day compared with its yield. */
+  async _forecastDayCheck(day) {
+    if (!this._forecastEnabled()) return;
+    const actual = Number(this.getCapabilityValue('tsun_energy.today')) || 0;
+    const res = this.forecast.checkDay(day, actual);
+    if (!res) return;
+    const acc = this.forecast.accuracy;
+    if (res.error === null) {
+      this._diag('info', 'forecast', this._t('diag.forecast_day_dull', { day, forecast: res.forecast, actual: res.actual }));
+    } else {
+      this._diag('info', 'forecast', this._t('diag.forecast_day', {
+        day,
+        forecast: res.forecast,
+        actual: res.actual,
+        error: `${res.error > 0 ? '+' : ''}${res.error}`,
+        mape: round(acc.mape, 1),
+        days: acc.days,
+      }));
+    }
+    await this._saveForecast(true);
+  }
+
+  async _saveForecast(force = false) {
+    const now = Date.now();
+    if (!force && now - (this.forecastSavedAt || 0) < FORECAST_SAVE_MS) return;
+    this.forecastSavedAt = now;
+    await this.setStoreValue('forecastModel', this.forecast.toJSON())
+      .catch((err) => this.error('Forecast save:', err.message));
+  }
+
+  _forecastStatus(now = Date.now()) {
+    const v = this._forecastValues(now);
+    const s = this.forecast.summary();
+    return {
+      today: v.today,
+      remaining: v.remaining,
+      tomorrow: v.tomorrow,
+      fetchedAt: s.fetchedAt,
+      error: this.forecastError,
+      samples: s.samples,
+      since: s.since,
+      globalFactor: s.globalFactor,
+      accuracy: s.accuracy,
+    };
+  }
+
+  /**
+   * Forecast energy (kWh) of today or tomorrow between two local times ('HH:mm'), for the
+   * Flow cards. Throws when the forecast is off or not available, so that a Flow can use its
+   * error output instead of acting on a wrong value.
+   */
+  forecastWindow(day, start, end) {
+    if (!this._forecastEnabled()) throw new Error(this.homey.__('errors.forecast_disabled'));
+    const s = parseTime(start);
+    const e = parseTime(end, true);
+    if (s === null || e === null || e <= s) throw new Error(this.homey.__('errors.forecast_window'));
+    const ctx = this._forecastCtx();
+    const today = localParts(Date.now(), ctx.timeZone).day;
+    const v = this.forecast.window(day === 'tomorrow' ? nextDay(today) : today, s, e, ctx);
+    if (v === null) throw new Error(this.homey.__('errors.forecast_unavailable'));
+    return round(v, 2);
+  }
+
+  /** "Refresh the forecast" action card. */
+  async refreshForecast() {
+    if (!this._forecastEnabled()) throw new Error(this.homey.__('errors.forecast_disabled'));
+    this._clearForecastTimer();
+    const ok = await this._fetchForecast();
+    if (!ok) throw new Error(this.forecastError ? this.forecastError.message : this.homey.__('errors.forecast_unavailable'));
+    return true;
   }
 };
 

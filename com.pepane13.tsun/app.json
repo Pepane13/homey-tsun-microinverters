@@ -1,6 +1,6 @@
 {
   "id": "com.pepane13.tsun",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "compatibility": ">=12.2.0",
   "sdk": 3,
   "platforms": [
@@ -17,7 +17,9 @@
   "category": [
     "energy"
   ],
-  "permissions": [],
+  "permissions": [
+    "homey:manager:geolocation"
+  ],
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",
@@ -377,6 +379,135 @@
                 "en": "%",
                 "fr": "%"
               }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Production forecast",
+            "fr": "Prévision de production"
+          },
+          "children": [
+            {
+              "id": "forecast_enabled",
+              "type": "checkbox",
+              "label": {
+                "en": "Enable the forecast",
+                "fr": "Activer la prévision"
+              },
+              "hint": {
+                "en": "Hourly weather forecast of the sunlight on your panels (Open-Meteo, free, no account), calibrated automatically on what your installation actually produces. The Homey location, rounded to about 1 km, is sent to api.open-meteo.com once an hour.",
+                "fr": "Prévision météo horaire de l'ensoleillement de vos panneaux (Open-Meteo, gratuit, sans compte), calibrée automatiquement sur ce que produit réellement votre installation. La position du Homey, arrondie à environ 1 km, est envoyée à api.open-meteo.com une fois par heure."
+              },
+              "value": false
+            },
+            {
+              "id": "forecast_tilt",
+              "type": "number",
+              "label": {
+                "en": "Panel tilt",
+                "fr": "Inclinaison des panneaux"
+              },
+              "hint": {
+                "en": "0° = flat, 90° = vertical. A typical tiled roof is 25-35°.",
+                "fr": "0° = à plat, 90° = vertical. Un toit en tuiles courant fait 25 à 35°."
+              },
+              "value": 30,
+              "min": 0,
+              "max": 90,
+              "units": {
+                "en": "°",
+                "fr": "°"
+              }
+            },
+            {
+              "id": "forecast_azimuth",
+              "type": "number",
+              "label": {
+                "en": "Panel orientation",
+                "fr": "Orientation des panneaux"
+              },
+              "hint": {
+                "en": "Compass bearing the panels face: 90 = east, 135 = south-east, 180 = south, 225 = south-west, 270 = west. Changing the tilt, orientation or peak power restarts the calibration.",
+                "fr": "Direction vers laquelle les panneaux sont tournés : 90 = est, 135 = sud-est, 180 = sud, 225 = sud-ouest, 270 = ouest. Changer l'inclinaison, l'orientation ou la puissance crête relance le calibrage."
+              },
+              "value": 180,
+              "min": 0,
+              "max": 360,
+              "units": {
+                "en": "°",
+                "fr": "°"
+              }
+            },
+            {
+              "id": "forecast_peak",
+              "type": "number",
+              "label": {
+                "en": "Peak power of the panels",
+                "fr": "Puissance crête des panneaux"
+              },
+              "hint": {
+                "en": "Total of the panels (e.g. 6 × 425 Wp = 2550). 0 = use the inverter rated power. Only sets the starting point: the calibration corrects it after a few sunny days.",
+                "fr": "Total des panneaux (ex. 6 × 425 Wc = 2550). 0 = puissance nominale de l'onduleur. Ne sert que de point de départ : le calibrage le corrige après quelques jours de soleil."
+              },
+              "value": 0,
+              "min": 0,
+              "max": 20000,
+              "units": {
+                "en": "Wp",
+                "fr": "Wc"
+              }
+            },
+            {
+              "id": "forecast_model",
+              "type": "dropdown",
+              "label": {
+                "en": "Weather model",
+                "fr": "Modèle météo"
+              },
+              "hint": {
+                "en": "Best match: Open-Meteo picks the best models for your location. Météo-France (AROME/ARPEGE) is the most precise in France.",
+                "fr": "Meilleur choix : Open-Meteo combine les meilleurs modèles pour votre position. Météo-France (AROME/ARPEGE) est le plus précis en France."
+              },
+              "value": "best_match",
+              "values": [
+                {
+                  "id": "best_match",
+                  "label": {
+                    "en": "Best match (recommended)",
+                    "fr": "Meilleur choix (recommandé)"
+                  }
+                },
+                {
+                  "id": "meteofrance_seamless",
+                  "label": {
+                    "en": "Météo-France",
+                    "fr": "Météo-France"
+                  }
+                },
+                {
+                  "id": "icon_seamless",
+                  "label": {
+                    "en": "DWD ICON (Germany)",
+                    "fr": "DWD ICON (Allemagne)"
+                  }
+                },
+                {
+                  "id": "ecmwf_ifs025",
+                  "label": {
+                    "en": "ECMWF",
+                    "fr": "ECMWF"
+                  }
+                },
+                {
+                  "id": "gfs_seamless",
+                  "label": {
+                    "en": "NOAA GFS",
+                    "fr": "NOAA GFS"
+                  }
+                }
+              ]
             }
           ]
         },
@@ -913,6 +1044,53 @@
             "filter": "driver_id=mx3000d"
           }
         ]
+      },
+      {
+        "id": "forecast_updated",
+        "title": {
+          "en": "The production forecast was updated",
+          "fr": "La prévision de production a été mise à jour"
+        },
+        "hint": {
+          "en": "Every hour, after the weather forecast has been downloaded (forecast enabled in the device settings).",
+          "fr": "Chaque heure, après le téléchargement de la prévision météo (prévision activée dans les réglages de l'appareil)."
+        },
+        "tokens": [
+          {
+            "name": "today",
+            "type": "number",
+            "title": {
+              "en": "Forecast today (kWh)",
+              "fr": "Prévision du jour (kWh)"
+            },
+            "example": 9.4
+          },
+          {
+            "name": "remaining",
+            "type": "number",
+            "title": {
+              "en": "Remaining today (kWh)",
+              "fr": "Restant du jour (kWh)"
+            },
+            "example": 3.1
+          },
+          {
+            "name": "tomorrow",
+            "type": "number",
+            "title": {
+              "en": "Forecast tomorrow (kWh)",
+              "fr": "Prévision de demain (kWh)"
+            },
+            "example": 11.2
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mx3000d"
+          }
+        ]
       }
     ],
     "conditions": [
@@ -921,6 +1099,172 @@
         "title": {
           "en": "A panel !{{is|is not}} underperforming",
           "fr": "Un panneau !{{est|n'est pas}} sous-performant"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mx3000d"
+          }
+        ]
+      },
+      {
+        "id": "forecast_window_above",
+        "title": {
+          "en": "Forecast production !{{is|is not}} above a threshold",
+          "fr": "La production prévue !{{est|n'est pas}} supérieure à un seuil"
+        },
+        "titleFormatted": {
+          "en": "Forecast production [[day]] from [[start]] to [[end]] !{{is|is not}} above [[threshold]] kWh",
+          "fr": "La production prévue [[day]] de [[start]] à [[end]] !{{est|n'est pas}} supérieure à [[threshold]] kWh"
+        },
+        "hint": {
+          "en": "Uses the calibrated forecast. \"To 00:00\" means the end of the day. Ends with an error when no forecast is available, so that the Flow does not act on a missing value.",
+          "fr": "Utilise la prévision calibrée. « À 00:00 » signifie la fin de la journée. Se termine en erreur si aucune prévision n'est disponible, pour que le Flow n'agisse pas sur une valeur manquante."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mx3000d"
+          },
+          {
+            "type": "dropdown",
+            "name": "day",
+            "title": {
+              "en": "Day",
+              "fr": "Jour"
+            },
+            "values": [
+              {
+                "id": "today",
+                "label": {
+                  "en": "today",
+                  "fr": "aujourd'hui"
+                }
+              },
+              {
+                "id": "tomorrow",
+                "label": {
+                  "en": "tomorrow",
+                  "fr": "demain"
+                }
+              }
+            ]
+          },
+          {
+            "type": "time",
+            "name": "start",
+            "title": {
+              "en": "From",
+              "fr": "De"
+            }
+          },
+          {
+            "type": "time",
+            "name": "end",
+            "title": {
+              "en": "To",
+              "fr": "À"
+            }
+          },
+          {
+            "type": "number",
+            "name": "threshold",
+            "title": {
+              "en": "Threshold",
+              "fr": "Seuil"
+            },
+            "placeholder": {
+              "en": "kWh",
+              "fr": "kWh"
+            },
+            "min": 0,
+            "max": 1000,
+            "step": 0.1
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "forecast_get_window",
+        "title": {
+          "en": "Get the forecast production",
+          "fr": "Obtenir la production prévue"
+        },
+        "titleFormatted": {
+          "en": "Get the forecast production [[day]] from [[start]] to [[end]]",
+          "fr": "Obtenir la production prévue [[day]] de [[start]] à [[end]]"
+        },
+        "hint": {
+          "en": "Advanced Flows: returns the forecast energy as a number token, e.g. to size a battery charge. \"To 00:00\" means the end of the day.",
+          "fr": "Flows avancés : renvoie l'énergie prévue sous forme de variable, par exemple pour doser une recharge de batterie. « À 00:00 » signifie la fin de la journée."
+        },
+        "tokens": [
+          {
+            "name": "energy",
+            "type": "number",
+            "title": {
+              "en": "Forecast energy (kWh)",
+              "fr": "Énergie prévue (kWh)"
+            },
+            "example": 4.2
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=mx3000d"
+          },
+          {
+            "type": "dropdown",
+            "name": "day",
+            "title": {
+              "en": "Day",
+              "fr": "Jour"
+            },
+            "values": [
+              {
+                "id": "today",
+                "label": {
+                  "en": "today",
+                  "fr": "aujourd'hui"
+                }
+              },
+              {
+                "id": "tomorrow",
+                "label": {
+                  "en": "tomorrow",
+                  "fr": "demain"
+                }
+              }
+            ]
+          },
+          {
+            "type": "time",
+            "name": "start",
+            "title": {
+              "en": "From",
+              "fr": "De"
+            }
+          },
+          {
+            "type": "time",
+            "name": "end",
+            "title": {
+              "en": "To",
+              "fr": "À"
+            }
+          }
+        ]
+      },
+      {
+        "id": "forecast_refresh",
+        "title": {
+          "en": "Refresh the production forecast",
+          "fr": "Actualiser la prévision de production"
         },
         "args": [
           {
@@ -941,7 +1285,8 @@
       "inverter",
       "solarman",
       "pv",
-      "energy"
+      "energy",
+      "forecast"
     ],
     "fr": [
       "tsun",
@@ -951,7 +1296,8 @@
       "onduleur",
       "solarman",
       "photovoltaïque",
-      "énergie"
+      "énergie",
+      "prévision"
     ]
   },
   "support": "mailto:stephane.renaudet@gmail.com",
