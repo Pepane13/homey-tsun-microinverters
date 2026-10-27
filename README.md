@@ -48,7 +48,7 @@ Register map taken from the [tsun-gen3-proxy](https://github.com/s-allius/tsun-g
 
 ## Installing the app
 
-On Windows, double-click **`install.cmd`** at the root of the repository: it checks Node.js (installs it with winget if missing), installs the Homey CLI if needed, runs `git pull` on a git clone, then `homey app install` (with `homey login` / `homey select` when needed). It runs in cmd, so the PowerShell execution policy ("running scripts is disabled on this system") does not get in the way.
+On Windows, double-click **`install.cmd`** at the root of the repository: it checks Node.js (24 or later, required by the current Homey CLI; installed or updated with winget), installs or updates the Homey CLI to the latest version, runs `git pull` on a git clone, then `homey app install` (with `homey login` / `homey select` when needed). It runs in cmd, so the PowerShell execution policy ("running scripts is disabled on this system") does not get in the way.
 
 Manual equivalent:
 
