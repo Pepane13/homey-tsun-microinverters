@@ -116,6 +116,8 @@ A failure is only treated as abnormal when the inverter was producing (> 30 W) j
 
 **Quickest:** double-click `install.cmd` at the root of the repository (steps 1 to 3 below, run from cmd so the PowerShell execution policy cannot block the Homey CLI).
 
+If Windows SmartScreen blocks `install.cmd` (*"Windows protected your PC"*, file downloaded from the internet): click **More info → Run anyway**, or right-click the file → **Properties → Unblock**, or run it from a command prompt opened in the repository folder. A file obtained with `git clone` / `git pull` is not flagged.
+
 If PowerShell answers *"running scripts is disabled on this system"* when you type `homey`, either use `install.cmd`, call `homey.cmd` instead of `homey`, or allow local scripts once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
 1. Install Node.js LTS:
