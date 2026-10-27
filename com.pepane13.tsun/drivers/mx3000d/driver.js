@@ -23,7 +23,8 @@ module.exports = class Mx3000dDriver extends Homey.Driver {
 
   async onPair(session) {
     session.setHandler('test', async ({ host, loggerSn }) => {
-      host = String(host || '').trim();
+      // iOS French keyboards may only offer a comma: accept 192,168,1,50 as well
+      host = String(host || '').trim().replace(/[,;\s]+/g, '.').replace(/\.+/g, '.');
       loggerSn = String(loggerSn || '').trim();
       if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) throw new Error(this.homey.__('errors.invalid_ip'));
       if (!/^\d{6,10}$/.test(loggerSn)) throw new Error(this.homey.__('errors.invalid_sn'));

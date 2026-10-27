@@ -2,9 +2,10 @@
 rem ------------------------------------------------------------------------------------------
 rem  TSUN Micro-inverters - installs the app on your Homey Pro from a Windows PC.
 rem
-rem  Double-click this file (or run "install.cmd" from a command prompt) at the root of the
-rem  repository. It runs in cmd, not PowerShell, so the PowerShell script execution policy
-rem  ("running scripts is disabled on this system") cannot block the Homey CLI.
+rem  Double-click this file (or run "install.cmd" from a command prompt), either at the root
+rem  of the repository or inside the com.pepane13.tsun app folder. It runs in cmd, not
+rem  PowerShell, so the PowerShell script execution policy ("running scripts is disabled on
+rem  this system") cannot block the Homey CLI.
 rem
 rem  Steps: Node.js check (24+), Homey CLI install or update, git pull (if this is a git clone),
 rem  then "homey app install" (with sign-in and Homey selection if needed).
@@ -12,11 +13,12 @@ rem ----------------------------------------------------------------------------
 setlocal EnableExtensions
 cd /d "%~dp0"
 title TSUN Micro-inverters - install
+rem install.cmd can sit at the root of the repository or inside the app folder itself
 set "APPDIR=%~dp0com.pepane13.tsun"
-
+if exist "%~dp0app.json" set "APPDIR=%~dp0."
 if not exist "%APPDIR%\app.json" (
-  echo [ERROR] Folder com.pepane13.tsun not found next to this script.
-  echo         Keep install.cmd at the root of the repository.
+  echo [ERROR] App not found: put install.cmd at the root of the repository
+  echo         or in the com.pepane13.tsun folder ^(next to app.json^).
   goto :fail
 )
 
@@ -70,16 +72,17 @@ for /f "delims=" %%v in ('call "%HOMEY%" --version 2^>nul') do echo       Homey 
 rem ---------- 3. Latest version of the source ----------
 echo.
 echo [3/4] Source code
-if not exist "%~dp0.git" (
-  echo       Not a git clone ^(zip download^): skipped.
-  goto :install
-)
 where git >nul 2>&1
 if errorlevel 1 (
   echo       git not installed: skipped, the local files are installed as they are.
   goto :install
 )
-git pull --ff-only
+git -C "%APPDIR%" rev-parse --is-inside-work-tree >nul 2>&1
+if errorlevel 1 (
+  echo       Not a git clone: skipped, the local files are installed as they are.
+  goto :install
+)
+git -C "%APPDIR%" pull --ff-only
 if errorlevel 1 echo [WARNING] git pull failed ^(local changes?^): the local files are installed as they are.
 
 rem ---------- 4. Install on the Homey ----------
