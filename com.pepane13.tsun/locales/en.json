@@ -94,7 +94,9 @@
     "forecast_learn": "Calibration {hour}h: {actual} kWh produced, {forecast} kWh forecast, factor now {factor}",
     "forecast_day": "Forecast of {day} (made the day before): {forecast} kWh, produced {actual} kWh ({error} %); average error over {days} days: {mape} %",
     "forecast_day_dull": "Forecast of {day} (made the day before): {forecast} kWh, produced {actual} kWh (day too dull to assess the accuracy)",
-    "forecast_recalibrate": "Panel plane or peak power changed: forecast calibration restarted"
+    "forecast_recalibrate": "Panel plane or peak power changed: forecast calibration restarted",
+    "counter_back": "The inverter daily counter went back to {raw} kWh (evening restart of the inverter): the day's yield {kept} kWh is kept",
+    "standby_start": "Inverter not answering since the app started: considered in night standby (end of production time not changed)"
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostics",

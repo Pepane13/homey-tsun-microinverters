@@ -1,4 +1,4 @@
-# TSUN Micro-inverters (v1.6.0) — Homey app for TSUN MX3000D micro-inverters
+# TSUN Micro-inverters (v1.6.1) — Homey app for TSUN MX3000D micro-inverters
 
 **Fully local** monitoring of the MX3000D through its Solarman logger (V5 protocol, TCP/8899), with no cloud and no proxy. Read-only: no command is ever sent to the inverter.
 

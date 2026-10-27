@@ -189,7 +189,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
   _restoreLastOk() {
     const saved = this.getStoreValue('lastOk');
     if (!saved || typeof saved.t !== 'number' || Date.now() - saved.t > LAST_OK_MAX_AGE_MS) return;
-    this.comm.lastOk = { t: saved.t, power: Number(saved.power) || 0 };
+    this.comm.lastOk = { t: saved.t, power: Number(saved.power) || 0, day: saved.day || null };
   }
 
   async _saveLastOk() {
@@ -466,6 +466,27 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     return raw;
   }
 
+  /**
+   * Daily counter value to set: never lower than the value already shown for the day. At dusk
+   * the inverter can restart (status codes 0 / 2) and reset its daily counters, or answer 0 while
+   * shutting down; the day's yield must survive until midnight. The day change sets the counters
+   * to 0 beforehand, so the next day starts from 0.
+   */
+  _todayValue(cap, stale, key, raw) {
+    const fresh = this._freshToday(stale, key, raw);
+    const prev = this.getCapabilityValue(cap);
+    if (typeof prev !== 'number' || fresh >= prev) return fresh;
+    if (key === 'ac' && prev - fresh >= 0.05) {
+      this._diagOnce('counter_back', 60, 'info', 'day', this._t('diag.counter_back', { raw: round(fresh, 2), kept: round(prev, 2) }));
+    }
+    return prev;
+  }
+
+  /** True if the timestamp is in the current local day. */
+  _isToday(t) {
+    return localParts(t, this.homey.clock.getTimezone()).day === this._todayKey();
+  }
+
   // ---------- Polling cycle ----------
 
   async _poll() {
@@ -544,14 +565,17 @@ module.exports = class Mx3000dDevice extends Homey.Device {
           this._diag('debug', 'comm', this._t('diag.isolated', vars));
         }
       } else {
-        if (!s.wake) s.wake = now;
         this._diag('info', 'comm', this._t('diag.wake', { time: this._time(now), hours: round(minutes / 60, 1) }));
       }
       this.comm.outage = null;
       await this._saveDayStats(true);
     }
+    // Active period of the day: from the first successful read to the last standby. A standby
+    // followed by a new answer (inverter flapping at dawn or dusk) is not the end of the day.
+    if (!s.wake) s.wake = now;
+    if (s.sleep) s.sleep = null;
     const wasProducing = this.comm.lastOk && this.comm.lastOk.power >= PRODUCING_W;
-    this.comm.lastOk = { t: now, power: d.power };
+    this.comm.lastOk = { t: now, power: d.power, day: this._todayKey() };
     if (wasProducing !== (d.power >= PRODUCING_W)) await this._saveLastOk();
 
     if (connectMs > SLOW_CONNECT_MS) {
@@ -647,8 +671,16 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     if (this.failures >= STANDBY_AFTER_FAILURES && !this.standby) {
       this.standby = true;
       if (o.powerBefore < PRODUCING_W) {
-        this.dayStats.sleep = this.dayStats.sleep || now;
-        this._diag('info', 'comm', this._t('diag.sleep', { time: this._time(now), power: o.powerBefore }));
+        const last = this.comm.lastOk;
+        if (last && (last.day ? last.day === this._todayKey() : this._isToday(last.t))) {
+          // standby time = last answer of the inverter (the standby is only detected 3 cycles later)
+          this.dayStats.sleep = last.t;
+          await this._saveDayStats(true);
+          this._diag('info', 'comm', this._t('diag.sleep', { time: this._time(last.t), power: o.powerBefore }));
+        } else {
+          // no answer since the app started (Homey restarted at night): not the end of production
+          this._diag('info', 'comm', this._t('diag.standby_start'));
+        }
       }
       // Night standby (normal) or loss of communication while producing (abnormal)
       const night = o.powerBefore < PRODUCING_W;
@@ -723,10 +755,11 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     const storedStale = this.getStoreValue('staleToday');
     const stale = (storedStale && typeof storedStale === 'object') ? { ...storedStale } : {};
     const before = Object.keys(stale).length;
-    await this._set('tsun_energy.today', this._freshToday(stale, 'ac', d.energyToday));
+    await this._set('tsun_energy.today', this._todayValue('tsun_energy.today', stale, 'ac', d.energyToday));
     for (let n = 0; n < PANELS; n++) {
+      const cap = `tsun_panel_energy.pv${n + 1}`;
       await this._set(`tsun_panel_power.pv${n + 1}`, d.panels[n].power);
-      await this._set(`tsun_panel_energy.pv${n + 1}`, this._freshToday(stale, `pv${n + 1}`, d.panels[n].energyToday));
+      await this._set(cap, this._todayValue(cap, stale, `pv${n + 1}`, d.panels[n].energyToday));
     }
     if (Object.keys(stale).length !== before) await this.setStoreValue('staleToday', stale);
 

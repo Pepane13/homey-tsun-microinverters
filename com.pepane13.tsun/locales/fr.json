@@ -94,7 +94,9 @@
     "forecast_learn": "Calibrage {hour}h : {actual} kWh produits, {forecast} kWh prévus, facteur désormais {factor}",
     "forecast_day": "Prévision du {day} (faite la veille) : {forecast} kWh, produit {actual} kWh ({error} %) ; erreur moyenne sur {days} jours : {mape} %",
     "forecast_day_dull": "Prévision du {day} (faite la veille) : {forecast} kWh, produit {actual} kWh (journée trop sombre pour évaluer la précision)",
-    "forecast_recalibrate": "Plan des panneaux ou puissance crête modifié : calibrage de la prévision relancé"
+    "forecast_recalibrate": "Plan des panneaux ou puissance crête modifié : calibrage de la prévision relancé",
+    "counter_back": "Le compteur du jour de l'onduleur est revenu à {raw} kWh (redémarrage de l'onduleur en fin de journée) : la production du jour {kept} kWh est conservée",
+    "standby_start": "Onduleur muet depuis le démarrage de l'app : considéré en veille de nuit (heure de fin de production inchangée)"
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostic",
