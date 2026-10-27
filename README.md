@@ -29,7 +29,7 @@ Fully local (cloud-free) monitoring of a TSUN TSOL-MX3000D micro-inverter throug
 | `test/daysummary.test.js` | Daily summary tests on real sequences (dusk counter reset, dawn/dusk flapping, restart at night): `node test/daysummary.test.js` |
 | `test/forecast.test.js` | Production forecast tests (Open-Meteo parsing, calibration, accuracy, Flow cards): `node test/forecast.test.js` |
 | `test/widget.test.js` | Dashboard widget tests (data, manifest, rendering in Chromium if Playwright is installed): `node test/widget.test.js` |
-| `install.cmd` | Windows installer: Node.js and Homey CLI checks, git pull, `homey app install` (double-click) |
+| `install.cmd` | Windows installer: Node.js and Homey CLI checks, git pull, `homey app install`, optional `homey app publish` (double-click; `publish` / `nopublish` options) |
 | `tsun_compare.js` | Detailed command-line reading using the app code: `node tsun_compare.js <logger_ip> <logger_sn> [interval_s]` |
 
 ## Registers used (function 0x03, slave 1)
@@ -62,6 +62,10 @@ homey app install
 ```
 
 ## Publishing to the Homey App Store
+
+`install.cmd` ends with an optional publish step: after installing on your Homey it asks whether to publish (no answer within 60 s = no). `install.cmd publish` publishes without asking, `install.cmd nopublish` only installs. The CLI runs in headless mode: the version number comes from `app.json` (never bumped by the CLI), the changelog from `.homeychangelog.json`, and on a git clone the published version is tagged `vX.Y.Z` and the tag pushed.
+
+Manual equivalent:
 
 ```powershell
 cd com.pepane13.tsun
