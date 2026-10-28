@@ -96,7 +96,9 @@
     "forecast_day_dull": "Prévision du {day} (faite la veille) : {forecast} kWh, produit {actual} kWh (journée trop sombre pour évaluer la précision)",
     "forecast_recalibrate": "Plan des panneaux ou puissance crête modifié : calibrage de la prévision relancé",
     "counter_back": "Le compteur du jour de l'onduleur est revenu à {raw} kWh (redémarrage de l'onduleur en fin de journée) : la production du jour {kept} kWh est conservée",
-    "standby_start": "Onduleur muet depuis le démarrage de l'app : considéré en veille de nuit (heure de fin de production inchangée)"
+    "standby_start": "Onduleur muet depuis le démarrage de l'app : considéré en veille de nuit (heure de fin de production inchangée)",
+    "delay_default_changed": "Durée minimale de sous-performance relevée de 15 à {minutes} min (nouvelle valeur par défaut : une ombre met souvent plus longtemps à traverser un panneau)",
+    "baseline_migrated": "Profil des panneaux mis à niveau : l'apprentissage redémarre en heure solaire (plus de décalage d'une heure aux changements d'heure), uniquement en plein soleil. Les alertes de sous-performance reprennent après 3 jours ensoleillés ; le contrôle journalier est conservé."
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostic",
@@ -142,7 +144,7 @@
     "report_copied": "Rapport copié",
     "loading": "Préparation du rapport…",
     "bl_title": "Profil appris des panneaux",
-    "bl_intro": "Production habituelle de chaque panneau par rapport à la moyenne de tous les panneaux, heure par heure (100 % = moyenne). Les valeurs basses révèlent les ombrages récurrents ; les alertes de sous-performance comparent chaque panneau à ces valeurs.",
+    "bl_intro": "Production habituelle de chaque panneau par rapport au meilleur panneau au même moment, heure par heure (100 % = plein soleil, valeurs basses = ombre récurrente). Appris uniquement en plein soleil ; les alertes de sous-performance comparent chaque panneau à ces valeurs, avec une tolérance de ±30 min.",
     "bl_mode_adaptive": "Détection adaptative",
     "bl_mode_simple": "Détection simple (profil appris mais non utilisé)",
     "bl_slots": "Tranches horaires apprises",

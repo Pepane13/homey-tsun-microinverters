@@ -30,6 +30,7 @@ const DAY_STATS_SAVE_MS = 5 * 60 * 1000; // daily statistics are saved at most e
 const UNREACHABLE_POLL_S = 60; // polling interval while unreachable during production (night standby: 5 min)
 const LAST_OK_MAX_AGE_MS = 30 * 60 * 1000; // last reading restored after a restart if younger than this
 const STARTUP_GRACE_MS = 15 * 60 * 1000; // no 'communication lost' alert during the first 15 min (network restarting)
+const UNDERPERF_DELAY_DEFAULT = 30; // min, default of the underperformance duration (15 before v1.5.2)
 const TEMP_ALERT_DEFAULT = 90; // °C, default of the temperature alert setting (80 before v1.5.1)
 // Thermal derating: the inverter moves its operating point towards the open-circuit voltage,
 // so the panel power falls while the panel voltage rises (a cloud lowers power without raising voltage)
@@ -139,6 +140,10 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     this.rateLimit = {};
     this._restoreDayStats();
     this.baseline = new PanelBaseline(PANELS, this.getStoreValue('panelBaseline'));
+    if (this.baseline.migrated) {
+      this._diag('info', 'panel', this._t('diag.baseline_migrated'));
+      this.setStoreValue('panelBaseline', this.baseline.toJSON()).catch(this.error);
+    }
     this.baselineSavedAt = Date.now();
     this.forecast = new SolarForecast(this.getStoreValue('forecastModel'));
     this.forecastSavedAt = Date.now();
@@ -174,12 +179,17 @@ module.exports = class Mx3000dDevice extends Homey.Device {
 
   /** v1.5.1: the default temperature alert goes from 80 to 90 °C (80 °C is reached on any sunny day). */
   async _migrateSettings() {
-    if (this.getStoreValue('settingsVersion') >= 2) return;
-    if (Number(this.getSetting('temp_alert')) === 80) {
+    const version = this.getStoreValue('settingsVersion') || 1;
+    if (version < 2 && Number(this.getSetting('temp_alert')) === 80) {
       await this.setSettings({ temp_alert: TEMP_ALERT_DEFAULT }).catch(this.error);
       this._diag('info', 'app', this._t('diag.temp_default_changed', { limit: TEMP_ALERT_DEFAULT }));
     }
-    await this.setStoreValue('settingsVersion', 2).catch(this.error);
+    // v1.5.2: shadows crossing a panel often last more than 15 min
+    if (version < 3 && Number(this.getSetting('underperf_delay')) === 15) {
+      await this.setSettings({ underperf_delay: UNDERPERF_DELAY_DEFAULT }).catch(this.error);
+      this._diag('info', 'app', this._t('diag.delay_default_changed', { minutes: UNDERPERF_DELAY_DEFAULT }));
+    }
+    if (version < 3) await this.setStoreValue('settingsVersion', 3).catch(this.error);
   }
 
   /**
@@ -855,9 +865,10 @@ module.exports = class Mx3000dDevice extends Homey.Device {
 
   // ---------- Panel checks ----------
   // Two modes:
-  // - adaptive (default): each panel is compared with its own learned share of production for the
-  //   current 15-minute slot (lib/panelbaseline.js), so recurring shadows and orientation
-  //   differences are not reported. No underperformance alert until the slot has been learned.
+  // - adaptive (default): each panel is compared with its own learned share of production (relative
+  //   to the best panel) for the current 15-minute slot of solar time, with a ±30 min tolerance
+  //   (lib/panelbaseline.js), so recurring shadows and orientation differences are not reported.
+  //   Only in direct sun; no underperformance alert until the slot has been learned.
   // - simple: each panel is compared with the average of the other 5.
   // Not producing (below 5 % of the others, min 5 W) is checked in both modes, except in adaptive
   // mode when the panel is usually almost fully shaded at that time.
@@ -869,7 +880,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
 
   async _checkPanels(powers, now = Date.now(), voltages = []) {
     const threshold = Number(this.getSetting('underperf_threshold')) || 15;
-    const delayMs = (Number(this.getSetting('underperf_delay')) || 15) * 60000;
+    const delayMs = (Number(this.getSetting('underperf_delay')) || UNDERPERF_DELAY_DEFAULT) * 60000;
     const minPower = Number(this.getSetting('underperf_min_power')) || 80;
     const adaptive = this._adaptive();
 
@@ -880,8 +891,10 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       return;
     }
 
-    const slot = PanelBaseline.slotOf(now, this.homey.clock.getTimezone());
-    const expectedShares = adaptive ? this.baseline.expected(slot) : null;
+    const slot = PanelBaseline.slotOf(now);
+    const best = Math.max(...powers);
+    // null under clouds (no shadow then) or while the slot is not learned yet
+    const expectedShares = adaptive ? this.baseline.expected(slot, powers) : null;
     const skipLearning = Array(PANELS).fill(false);
 
     for (let i = 0; i < PANELS; i++) {
@@ -891,7 +904,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       let expected;
       const expShare = expectedShares ? expectedShares[i] : null;
       if (adaptive) {
-        expected = expShare !== null ? expShare * mean : null;
+        expected = expShare !== null ? expShare * best : null;
         deviation = expected ? ((powers[i] - expected) / expected) * 100 : null;
       } else {
         expected = others;
@@ -934,7 +947,9 @@ module.exports = class Mx3000dDevice extends Homey.Device {
         continue;
       }
       if (deviation <= -threshold) {
-        skipLearning[i] = true; // never learn an anomaly as normal
+        // Still learned while not confirmed: shadows drift a few minutes a day with the seasons and
+        // must keep being learned. A confirmed (flagged) anomaly is not learned; a lasting defect
+        // is also caught by the daily degradation check.
         if (w.since === null) w.since = now;
         if (!w.flagged && now - w.since >= delayMs) {
           w.flagged = true;
@@ -1027,8 +1042,9 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     const powers = panels.map((p) => p.power || 0);
     const mean = powers.reduce((s, x) => s + x, 0) / PANELS;
     if (!this.standby && mean > 0 && this._adaptive()) {
-      const exp = this.baseline.expected(PanelBaseline.slotOf(now, this.homey.clock.getTimezone()));
-      if (exp) panels.forEach((p, i) => { p.expected = exp[i] !== null ? round(exp[i] * mean) : null; });
+      const exp = this.baseline.expected(PanelBaseline.slotOf(now), powers);
+      const best = Math.max(...powers);
+      if (exp) panels.forEach((p, i) => { p.expected = exp[i] !== null ? round(exp[i] * best) : null; });
     }
     const dc = d && !this.standby ? round(d.panels.reduce((s, p) => s + p.power, 0)) : null;
     const power = v('measure_power');
@@ -1068,8 +1084,18 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       id: this.getData().id,
       name: this.getName(),
       mode: this._adaptive() ? 'adaptive' : 'simple',
-      ...this.baseline.summary(),
+      ...this.baseline.summary(this._utcOffsetMin()),
     };
+  }
+
+  /** Current offset of the Homey local time from UTC, in minutes (summer/winter time aware). */
+  _utcOffsetMin(date = new Date()) {
+    const tz = this.homey.clock.getTimezone();
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(date).map((x) => [x.type, x.value]));
+    const local = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+    return Math.round((local - Math.floor(date.getTime() / 60000) * 60000) / 60000);
   }
 
   async resetBaseline() {

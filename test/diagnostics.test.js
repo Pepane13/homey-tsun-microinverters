@@ -77,7 +77,7 @@ function setRegs({
   mock._settings.log_level = 'debug';
   const d = new D(manifest, {
     host: '127.0.0.1', logger_sn: '1234567890', poll_interval: 30, temp_offset: 40,
-    underperf_threshold: 15, underperf_delay: 15, underperf_min_power: 80, underperf_mode: 'simple',
+    underperf_threshold: 15, underperf_delay: 16, underperf_min_power: 80, underperf_mode: 'simple',
     comm_alert_delay: 10, voltage_max: 253, voltage_min: 207, temp_alert: 80,
   });
   let day = '2026-10-23';

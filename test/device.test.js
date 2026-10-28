@@ -11,7 +11,7 @@ function setRegs({ac=2004,today=5.73,total=1321.1,pv=[348.7,359.7,348.7,346.2,37
  state.regs=r;}
 (async()=>{
  await new Promise(r=>srv.listen(18899,'127.0.0.1',r));
- const d=new D(manifest,{host:'127.0.0.1',logger_sn:'1234567890',poll_interval:30,temp_offset:40,underperf_threshold:15,underperf_delay:15,underperf_min_power:80,underperf_mode:'simple'});
+ const d=new D(manifest,{host:'127.0.0.1',logger_sn:'1234567890',poll_interval:30,temp_offset:40,underperf_threshold:15,underperf_delay:16,underperf_min_power:80,underperf_mode:'simple'});
  // old capabilities to migrate
  d.caps['meter_power.today']=1;d.caps['measure_power.pv1']=1;d.caps.measure_temperature=20;d.caps.tsun_energy_today=1;d.caps.measure_voltage=230;d.caps['tsun_energy.total']=1;
  let day='2026-10-23';d._todayKey=()=>day;

@@ -96,7 +96,9 @@
     "forecast_day_dull": "Forecast of {day} (made the day before): {forecast} kWh, produced {actual} kWh (day too dull to assess the accuracy)",
     "forecast_recalibrate": "Panel plane or peak power changed: forecast calibration restarted",
     "counter_back": "The inverter daily counter went back to {raw} kWh (evening restart of the inverter): the day's yield {kept} kWh is kept",
-    "standby_start": "Inverter not answering since the app started: considered in night standby (end of production time not changed)"
+    "standby_start": "Inverter not answering since the app started: considered in night standby (end of production time not changed)",
+    "delay_default_changed": "Underperformance minimum duration raised from 15 to {minutes} min (new default: shadows often take longer to cross a panel)",
+    "baseline_migrated": "Panel profile upgraded: learning restarts in solar time (no more one-hour shift at summer/winter time changes), only in direct sun. Underperformance alerts resume after 3 sunny days; the daily check is kept."
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostics",
@@ -142,7 +144,7 @@
     "report_copied": "Report copied",
     "loading": "Preparing the report…",
     "bl_title": "Learned panel profile",
-    "bl_intro": "Usual production of each panel compared with the average of all panels, by hour (100 % = average). Lower values show recurring shadows; underperformance alerts compare each panel with these values.",
+    "bl_intro": "Usual production of each panel compared with the best panel at the same moment, by hour (100 % = full sun, low values = recurring shadow). Learned in direct sun only; underperformance alerts compare each panel with these values, with a ±30 min tolerance.",
     "bl_mode_adaptive": "Adaptive detection",
     "bl_mode_simple": "Simple detection (profile learned but not used)",
     "bl_slots": "Time slots learned",

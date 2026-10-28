@@ -1,6 +1,6 @@
 {
   "id": "com.pepane13.tsun",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "compatibility": ">=12.2.0",
   "sdk": 3,
   "platforms": [
@@ -334,7 +334,7 @@
                 "en": "The gap must last this long before the Flow is triggered (filters passing shadows).",
                 "fr": "L'écart doit durer ce temps avant de déclencher le Flow (filtre les ombres passagères)."
               },
-              "value": 15,
+              "value": 30,
               "min": 1,
               "max": 240,
               "units": {
