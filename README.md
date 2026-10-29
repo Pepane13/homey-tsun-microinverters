@@ -110,3 +110,8 @@ node test/forecast.test.js
 node test/daysummary.test.js
 node test/restart.test.js
 ```
+
+## Image credits
+
+- App image: photo by an Unsplash contributor ([photo-1655300256335](https://unsplash.com/photos/a-house-with-solar-panels-Ja8t8nJN2I4)), Unsplash License.
+- Driver image: TSUN MX3000D product visual (TSUNESS), background removed, used to identify the supported device.

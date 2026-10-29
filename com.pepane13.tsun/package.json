@@ -1,6 +1,6 @@
 {
   "name": "com.pepane13.tsun",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "private": true,
   "main": "app.js",
   "license": "GPL-3.0-or-later"

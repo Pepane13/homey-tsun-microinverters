@@ -1,4 +1,8 @@
 {
+  "1.7.1": {
+    "en": "New App Store images and driver icon, shorter description.",
+    "fr": "Nouvelles images et nouvelle icône de l'appareil, description plus courte."
+  },
   "1.7.0": {
     "en": "Panel alerts learn by themselves: in adaptive mode a panel is only reported in the evening when it never reached its usual best share of the day in direct sun (a shadow, even one growing with the seasons, only lowers a panel for part of the day). The threshold widens for a naturally irregular panel and a drop confirmed 7 sunny days becomes the new normal. Real-time deviations only feed the Flow cards. Short inverter alarms at wake-up are no longer notified (5 min confirmation).",
     "fr": "Les alertes des panneaux apprennent toutes seules : en mode adaptatif, un panneau n'est signalé que le soir s'il n'a jamais atteint en plein soleil sa meilleure part habituelle de la journée (une ombre, même qui s'allonge avec les saisons, ne baisse un panneau qu'une partie de la journée). Le seuil s'élargit pour un panneau naturellement irrégulier et une baisse confirmée 7 jours de soleil devient la nouvelle normale. Les écarts en temps réel n'alimentent plus que les cartes Flow. Les alarmes brèves de l'onduleur au réveil ne sont plus notifiées (confirmation 5 min)."

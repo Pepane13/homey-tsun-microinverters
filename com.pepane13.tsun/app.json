@@ -1,6 +1,6 @@
 {
   "id": "com.pepane13.tsun",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "compatibility": ">=12.2.0",
   "sdk": 3,
   "platforms": [
@@ -21,9 +21,9 @@
     "homey:manager:geolocation"
   ],
   "images": {
-    "small": "/assets/images/small.png",
-    "large": "/assets/images/large.png",
-    "xlarge": "/assets/images/xlarge.png"
+    "small": "/assets/images/small.jpg",
+    "large": "/assets/images/large.jpg",
+    "xlarge": "/assets/images/xlarge.jpg"
   },
   "author": {
     "name": "Stéphane Renaudet",
@@ -212,9 +212,9 @@
         "lan"
       ],
       "images": {
-        "small": "/drivers/mx3000d/assets/images/small.png",
-        "large": "/drivers/mx3000d/assets/images/large.png",
-        "xlarge": "/drivers/mx3000d/assets/images/xlarge.png"
+        "small": "/drivers/mx3000d/assets/images/small.jpg",
+        "large": "/drivers/mx3000d/assets/images/large.jpg",
+        "xlarge": "/drivers/mx3000d/assets/images/xlarge.jpg"
       },
       "pair": [
         {
