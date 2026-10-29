@@ -31,6 +31,7 @@ const UNREACHABLE_POLL_S = 60; // polling interval while unreachable during prod
 const LAST_OK_MAX_AGE_MS = 30 * 60 * 1000; // last reading restored after a restart if younger than this
 const STARTUP_GRACE_MS = 15 * 60 * 1000; // no 'communication lost' alert during the first 15 min (network restarting)
 const UNDERPERF_DELAY_DEFAULT = 30; // min, default of the underperformance duration (15 before v1.5.2)
+const ALARM_CONFIRM_MS = 5 * 60 * 1000; // inverter alarm bits must last 5 min before a notification (wake-up glitches)
 const TEMP_ALERT_DEFAULT = 90; // °C, default of the temperature alert setting (80 before v1.5.1)
 // Thermal derating: the inverter moves its operating point towards the open-circuit voltage,
 // so the panel power falls while the panel voltage rises (a cloud lowers power without raising voltage)
@@ -419,6 +420,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     if (!lastDay) return;
 
     this._logDailySummary(lastDay);
+    await this._panelVerdict(lastDay);
     await this._checkDailyShares(lastDay);
     await this._forecastDayCheck(lastDay);
 
@@ -687,6 +689,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
           this.dayStats.sleep = last.t;
           await this._saveDayStats(true);
           this._diag('info', 'comm', this._t('diag.sleep', { time: this._time(last.t), power: o.powerBefore }));
+          await this._panelVerdict(this._todayKey());
         } else {
           // no answer since the app started (Homey restarted at night): not the end of production
           this._diag('info', 'comm', this._t('diag.standby_start'));
@@ -827,13 +830,27 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       }));
     }
 
+    // Alarm or fault bits: traced at once, notified only if they last (the inverter often reports a
+    // short alarm while waking up or reconnecting to the grid)
     const alarmKey = `${d.alarms}/${d.faults}`;
-    if ((d.alarms || d.faults) && this.lastAlarmKey !== alarmKey) {
-      const msg = this._t('diag.alarm', { status: statusLabel(d, (k) => this.homey.__(k)) });
-      this._diag('error', 'inverter', msg);
-      await this._notify('notify_alarm', msg);
+    const status = statusLabel(d, (k) => this.homey.__(k));
+    if (!(d.alarms || d.faults)) {
+      if (this.alarmWatch && !this.alarmWatch.notified) {
+        this._diag('info', 'inverter', this._t('diag.alarm_short', { status: this.alarmWatch.status }));
+      }
+      this.alarmWatch = null;
+    } else {
+      if (!this.alarmWatch || this.alarmWatch.key !== alarmKey) {
+        this.alarmWatch = { key: alarmKey, since: now, status, notified: false };
+        this._diag('info', 'inverter', this._t('diag.alarm_seen', { status }));
+      }
+      if (!this.alarmWatch.notified && now - this.alarmWatch.since >= ALARM_CONFIRM_MS) {
+        this.alarmWatch.notified = true;
+        const msg = this._t('diag.alarm', { status });
+        this._diag('error', 'inverter', msg);
+        await this._notify('notify_alarm', msg);
+      }
     }
-    this.lastAlarmKey = alarmKey;
   }
 
   /**
@@ -957,11 +974,13 @@ module.exports = class Mx3000dDevice extends Homey.Device {
             panel, power: round(powers[i]), avg: round(others), expected: round(expected), dev: round(deviation),
           };
           const msg = this._t(adaptive ? 'diag.panel_under_adaptive' : 'diag.panel_under', vars);
-          this._diag('warn', 'panel', msg);
+          // Adaptive mode: only traced; the notification comes from the day verdict (a shadow
+          // lowers a panel for part of the day only, a defect all day long).
+          this._diag(adaptive ? 'info' : 'warn', 'panel', msg);
           await this.triggerUnderperforming.trigger(this, {
             panel, power: round(powers[i]), average: round(others), expected: round(expected), deviation: round(deviation),
           }).catch(this.error);
-          if (!isZero) await this._notify('notify_panel', msg);
+          if (!isZero && !adaptive) await this._notify('notify_panel', msg);
         }
       } else {
         w.since = null;
@@ -990,6 +1009,53 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       .catch((err) => this.error('Baseline save:', err.message));
   }
 
+  /**
+   * Day verdict of the panels (adaptive mode): compares the best share each panel reached today
+   * in direct sun with its usual best share (lib/panelbaseline.js). Called when the inverter goes
+   * to sleep in the evening, and at the day change at the latest.
+   */
+  async _panelVerdict(day) {
+    if (!this._adaptive()) return;
+    const threshold = Number(this.getSetting('daily_threshold')) || 10;
+    const res = this.baseline.verdict(day, threshold);
+    if (res.done) return;
+    if (!res.sunny) {
+      this._diag('info', 'panel', this._t('diag.verdict_cloudy', { day }));
+      return;
+    }
+    if (!res.ready) {
+      this._diag('info', 'panel', this._t('diag.verdict_learning', {
+        days: this.baseline.best.days, min: PanelBaseline.BEST_MIN_DAYS,
+      }));
+      await this._saveBaseline(true);
+      return;
+    }
+    let anomalies = 0;
+    for (let i = 0; i < res.panels.length; i++) {
+      const r = res.panels[i];
+      const panel = i + 1;
+      const vars = {
+        panel, day, best: round(r.best * 100, 0), usual: round((r.ref || 0) * 100, 0),
+        dev: Math.abs(round(r.dev || 0)), threshold: round(r.threshold), days: PanelBaseline.ACCEPT_DAYS,
+      };
+      if (r.state === 'new' || r.state === 'ongoing') {
+        anomalies += 1;
+        const msg = this._t('diag.verdict_under', vars);
+        this._diag('warn', 'panel', msg);
+        if (r.state === 'new') await this._notify('notify_panel', msg);
+      } else if (r.state === 'accepted') {
+        const msg = this._t('diag.verdict_accepted', vars);
+        this._diag('warn', 'panel', msg);
+        await this._notify('notify_panel', msg);
+      } else if (r.state === 'recovered') {
+        this._diag('info', 'panel', this._t('diag.verdict_recovered', vars));
+        await this.triggerRecovered.trigger(this, { panel }).catch(this.error);
+      }
+    }
+    if (!anomalies) this._diag('info', 'panel', this._t('diag.verdict_ok', { day }));
+    await this._saveBaseline(true);
+  }
+
   /** Daily degradation check, with yesterday's yield per panel (called at the day change). */
   async _checkDailyShares(day) {
     const energies = Array.from({ length: PANELS }, (_, i) => this.getCapabilityValue(`tsun_panel_energy.pv${i + 1}`) || 0);
@@ -1009,8 +1075,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
           const msg = this._t('diag.panel_daily', {
             day, panel: i + 1, energy: round(energies[i], 2), dev: Math.abs(round(dev)), expected: round(res.expectedShare[i] * mean, 2),
           });
-          this._diag('warn', 'panel', msg);
-          await this._notify('notify_panel', msg);
+          this._diag('info', 'panel', msg); // information only: depends on clouds and seasonal shadows
         }
       }
     }

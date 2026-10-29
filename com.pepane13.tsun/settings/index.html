@@ -260,8 +260,12 @@
               + `<td class="muted">${h.ready ? '' : __('bl_learning')}</td></tr>`).join('');
             const daily = `<p class="muted">${__('bl_daily')} : ${b.daily.share.map((v, i) => `PV${i + 1} ${v} %`).join(' · ')}`
               + ` (${b.daily.days} ${__('bl_days')})</p>`;
+            const bb = b.best;
+            const bestLine = bb ? `<p class="muted">${__('bl_best')} : ${bb.ref.map((v, i) => `PV${i + 1} ${v === null ? '–' : `${v} %`}${bb.flagged[i] ? ' ⚠' : ''}`).join(' · ')}`
+              + ` (${bb.days} ${__('bl_days')}${bb.ready ? '' : `, ${__('bl_learning')}`})`
+              + `<br>${__('bl_spread')} : ${bb.spread.map((v, i) => `PV${i + 1} ${v} %`).join(' · ')}</p>` : '';
             return `<div class="status-card">${head}<table class="bl"><tr><th>${__('bl_hour')}</th>`
-              + `${b.hours[0].ratios.map((v, i) => `<th>PV${i + 1}</th>`).join('')}<th></th></tr>${rows}</table>${daily}`
+              + `${b.hours[0].ratios.map((v, i) => `<th>PV${i + 1}</th>`).join('')}<th></th></tr>${rows}</table>${bestLine}${daily}`
               + `<button class="homey-button-secondary-small" data-reset="${esc(b.id)}">${__('bl_reset')}</button></div>`;
           }).join('') || `<p class="muted">${__('bl_empty')}</p>`;
           document.querySelectorAll('[data-reset]').forEach((btn) => btn.addEventListener('click', () => {

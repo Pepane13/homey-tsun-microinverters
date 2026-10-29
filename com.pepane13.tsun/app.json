@@ -1,6 +1,6 @@
 {
   "id": "com.pepane13.tsun",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "compatibility": ">=12.2.0",
   "sdk": 3,
   "platforms": [
@@ -283,8 +283,8 @@
                 "fr": "Mode de détection"
               },
               "hint": {
-                "en": "Adaptive: each panel is compared with its own usual production at that time of day (learned automatically, so recurring shadows are not reported; alerts start once a time slot has been learned on 3 days). Simple: each panel is compared with the average of the others.",
-                "fr": "Adaptatif : chaque panneau est comparé à sa propre production habituelle à cette heure (apprise automatiquement, les ombrages récurrents ne sont donc pas signalés ; alertes dès qu'une tranche horaire est apprise sur 3 jours). Simple : chaque panneau est comparé à la moyenne des autres."
+                "en": "Adaptive: learned automatically. Each evening, each panel must have reached its usual best share of production at least once during the day; recurring and seasonal shadows are therefore never reported (alerts after 5 sunny days of learning). Simple: each panel is compared in real time with the average of the others.",
+                "fr": "Adaptatif : appris automatiquement. Chaque soir, chaque panneau doit avoir atteint au moins une fois dans la journée sa meilleure part habituelle de production ; les ombres récurrentes et saisonnières ne sont donc jamais signalées (alertes après 5 jours de soleil d'apprentissage). Simple : chaque panneau est comparé en temps réel à la moyenne des autres."
               },
               "value": "adaptive",
               "values": [
@@ -312,8 +312,8 @@
                 "fr": "Seuil de sous-performance"
               },
               "hint": {
-                "en": "A panel is underperforming when it produces this much less than expected: its usual production at that time (adaptive mode) or the average of the others (simple mode).",
-                "fr": "Un panneau est sous-performant quand il produit ce pourcentage de moins que prévu : sa production habituelle à cette heure (mode adaptatif) ou la moyenne des autres (mode simple)."
+                "en": "Real-time check: a panel is underperforming when it produces this much less than expected: its usual production at that time (adaptive mode, Flow cards only, no notification) or the average of the others (simple mode, with notification).",
+                "fr": "Contrôle en temps réel : un panneau est sous-performant quand il produit ce pourcentage de moins que prévu : sa production habituelle à cette heure (mode adaptatif, cartes Flow seulement, sans notification) ou la moyenne des autres (mode simple, avec notification)."
               },
               "value": 15,
               "min": 5,
@@ -365,12 +365,12 @@
               "id": "daily_threshold",
               "type": "number",
               "label": {
-                "en": "Daily degradation threshold",
-                "fr": "Seuil de dégradation journalière"
+                "en": "Day verdict threshold",
+                "fr": "Seuil du bilan du soir"
               },
               "hint": {
-                "en": "Adaptive mode: at midnight, a panel whose share of the daily yield is this much below its usual share is reported (dirt, new shadow, ageing). Starts after 7 learned days.",
-                "fr": "Mode adaptatif : à minuit, un panneau dont la part de la production du jour est inférieure de ce pourcentage à sa part habituelle est signalé (encrassement, nouvel ombrage, vieillissement). Actif après 7 jours d'apprentissage."
+                "en": "Adaptive mode: a panel whose best share of the day is this much below its usual best share is reported in the evening (dirt, cable, diode, ageing). Minimum value: it widens by itself for a naturally irregular panel.",
+                "fr": "Mode adaptatif : un panneau dont la meilleure part du jour est inférieure de ce pourcentage à sa meilleure part habituelle est signalé le soir (encrassement, câble, diode, vieillissement). Valeur minimale : elle s'élargit toute seule pour un panneau naturellement irrégulier."
               },
               "value": 10,
               "min": 3,

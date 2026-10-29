@@ -15,7 +15,15 @@
  * sky makes all panels equal. A moment is sunny when the best panel produces at least 60 % of
  * the slot's recent peak (decaying maximum).
  *
- * Daily: the usual share of each panel in the daily yield, used to detect slow degradation.
+ * Daily: the usual share of each panel in the daily yield (shown for information).
+ *
+ * Day verdict (v1.7): the alerts about an underperforming panel are based on the BEST share each
+ * panel reaches during the day (15-minute average in direct sun). A shadow only lowers a panel's
+ * production for part of the day, so it never lowers that best share; a real defect (bypass diode,
+ * broken cell, dirt, MPPT input) lowers it all day long. The usual best share and its normal
+ * day-to-day spread are learned, and the alert threshold widens by itself when a panel is
+ * naturally irregular (3 x its usual spread). A lasting change confirmed for 7 sunny days is
+ * accepted as the new normal.
  */
 
 const SLOT_MIN = 15;
@@ -28,6 +36,12 @@ const PEAK_DECAY = 0.95; // slot peak lowered by 5 % per new day (follows the se
 const PEAK_JUMP = 1.5; // first real sun after learning in cloudy conditions: the slot restarts
 const DAILY_MIN_DAYS = 7; // daily degradation check starts after 7 learned days
 const DAILY_ALPHA_MIN = 0.05; // daily EMA: ~20 days
+const VERDICT_MIN_SAMPLES = 5; // a slot counts in the day verdict with at least 5 sunny samples
+const VERDICT_MIN_SLOTS = 8; // and the day needs at least 8 such slots (2 h of direct sun)
+const BEST_MIN_DAYS = 5; // day verdict alerts start after 5 learned sunny days
+const BEST_ALPHA_MIN = 0.2; // learning of the usual best share: ~5 days
+const SPREAD_FACTOR = 3; // effective threshold >= 3 x the usual day-to-day spread
+const ACCEPT_DAYS = 7; // a change confirmed for 7 sunny days becomes the new normal
 const VERSION = 2; // v1: local time, shares relative to the mean (intraday part discarded)
 
 class PanelBaseline {
@@ -41,6 +55,8 @@ class PanelBaseline {
     this.migrated = false;
     if (!data) return;
     if (data.daily && Array.isArray(data.daily.share) && data.daily.share.length === panels) this.daily = data.daily;
+    if (data.best && Array.isArray(data.best.ref) && data.best.ref.length === panels) this.best = { ...this.best, ...data.best };
+    if (data.today && data.today.day && data.today.slots) this.today = data.today;
     if (data.v === VERSION && Array.isArray(data.slots) && data.slots.length === SLOTS) {
       this.slots = data.slots;
       this.since = data.since || null;
@@ -52,11 +68,23 @@ class PanelBaseline {
   static get SLOT_MIN() { return SLOT_MIN; }
   static get MIN_DAYS() { return MIN_DAYS; }
   static get DAILY_MIN_DAYS() { return DAILY_MIN_DAYS; }
+  static get BEST_MIN_DAYS() { return BEST_MIN_DAYS; }
+  static get ACCEPT_DAYS() { return ACCEPT_DAYS; }
 
   reset() {
     // slots[s] = null | { r: [share per panel], n, days, last: 'YYYY-MM-DD', peak: W }
     this.slots = Array.from({ length: SLOTS }, () => null);
     this.daily = { share: Array(this.panels).fill(1), days: 0 };
+    // usual best share of the day (ref), its usual spread, anomalies in progress (days confirmed)
+    this.best = {
+      ref: Array(this.panels).fill(null),
+      spread: Array(this.panels).fill(0),
+      days: 0,
+      flagged: Array(this.panels).fill(0),
+      last: null,
+    };
+    // today's accumulation: slots[s] = { n, sum: [share per panel] }
+    this.today = { day: null, slots: {} };
     this.since = null;
   }
 
@@ -109,6 +137,7 @@ class PanelBaseline {
     }
     if (best > (e.peak || 0)) e.peak = best;
     if (best < SUNNY_RATIO * e.peak) return false; // cloudy moment: not learned
+    this._accumulate(slot, sh, day);
     e.n += 1;
     const alpha = Math.max(1 / e.n, ALPHA_MIN);
     for (let i = 0; i < this.panels; i++) {
@@ -119,6 +148,72 @@ class PanelBaseline {
     if (e.last !== day) { e.days += 1; e.last = day; }
     if (!this.since) this.since = day;
     return true;
+  }
+
+  /** Adds a sunny sample to today's accumulation (day verdict). */
+  _accumulate(slot, sh, day) {
+    if (this.today.day !== day) this.today = { day, slots: {} };
+    const t = this.today.slots[slot] || { n: 0, sum: Array(this.panels).fill(0) };
+    t.n += 1;
+    for (let i = 0; i < this.panels; i++) t.sum[i] += sh[i];
+    this.today.slots[slot] = t;
+  }
+
+  /** Best 15-minute share of each panel for a day (null if not enough direct sun that day). */
+  bestOfDay(day) {
+    if (this.today.day !== day) return null;
+    const slots = Object.values(this.today.slots).filter((t) => t.n >= VERDICT_MIN_SAMPLES);
+    if (slots.length < VERDICT_MIN_SLOTS) return null;
+    return Array.from({ length: this.panels }, (_, i) => Math.max(...slots.map((t) => t.sum[i] / t.n)));
+  }
+
+  /**
+   * Day verdict, once per day (in the evening, or at the day change at the latest).
+   * @param {string} day YYYY-MM-DD
+   * @param {number} thresholdPct minimum deviation for an alert (widened by the learned spread)
+   * @returns {{ done: boolean, sunny: boolean, ready: boolean, panels: object[] }}
+   *   panels[i] = { best, ref, dev, threshold, state: 'ok'|'new'|'ongoing'|'accepted'|'recovered'|'learning' }
+   */
+  verdict(day, thresholdPct) {
+    const b = this.best;
+    if (b.last === day) return { done: true, sunny: false, ready: false, panels: [] };
+    const best = this.bestOfDay(day);
+    if (!best) return { done: false, sunny: false, ready: false, panels: [] };
+    b.last = day;
+    const ready = b.days >= BEST_MIN_DAYS;
+    b.days += 1;
+    const alpha = Math.max(1 / b.days, BEST_ALPHA_MIN);
+    const panels = best.map((v, i) => {
+      const ref = b.ref[i];
+      const dev = ref ? ((v - ref) / ref) * 100 : null;
+      const threshold = Math.max(thresholdPct, SPREAD_FACTOR * b.spread[i]);
+      const r = { best: v, ref, dev, threshold, state: ready ? 'ok' : 'learning' };
+      const learn = () => {
+        if (ref === null) { b.ref[i] = v; return; }
+        b.spread[i] += alpha * (Math.abs(dev) - b.spread[i]);
+        b.ref[i] += alpha * (v - ref);
+      };
+      if (!ready || dev === null) { learn(); return r; }
+      if (dev <= -threshold) {
+        b.flagged[i] += 1;
+        if (b.flagged[i] >= ACCEPT_DAYS) { // lasting change: new normal
+          b.ref[i] = v;
+          b.flagged[i] = 0;
+          r.state = 'accepted';
+        } else {
+          r.state = b.flagged[i] === 1 ? 'new' : 'ongoing';
+        }
+        return r; // an anomaly is not learned
+      }
+      if (b.flagged[i] > 0) {
+        if (dev > -threshold / 2) { b.flagged[i] = 0; r.state = 'recovered'; learn(); }
+        else r.state = 'ongoing'; // in between: still suspect, not learned
+        return r;
+      }
+      learn();
+      return r;
+    });
+    return { done: false, sunny: true, ready, panels };
   }
 
   /** True if the slot has been learned on enough distinct sunny days. */
@@ -198,6 +293,13 @@ class PanelBaseline {
       readySlots,
       hours,
       daily: { days: this.daily.days, ready: this.daily.days >= DAILY_MIN_DAYS, share: this.daily.share.map((s) => Math.round(s * 100)) },
+      best: {
+        days: this.best.days,
+        ready: this.best.days >= BEST_MIN_DAYS,
+        ref: this.best.ref.map((x) => (x === null ? null : Math.round(x * 100))),
+        spread: this.best.spread.map((x) => Math.round(x * 10) / 10),
+        flagged: this.best.flagged.slice(),
+      },
     };
   }
 
@@ -210,6 +312,15 @@ class PanelBaseline {
         ...e, r: e.r.map((x) => (x === null ? null : round(x))), peak: e.peak ? Math.round(e.peak * 10) / 10 : e.peak,
       } : null)),
       daily: { share: this.daily.share.map(round), days: this.daily.days },
+      best: {
+        ...this.best,
+        ref: this.best.ref.map((x) => (x === null ? null : round(x))),
+        spread: this.best.spread.map(round),
+      },
+      today: {
+        day: this.today.day,
+        slots: Object.fromEntries(Object.entries(this.today.slots).map(([k, t]) => [k, { n: t.n, sum: t.sum.map(round) }])),
+      },
     };
   }
 }

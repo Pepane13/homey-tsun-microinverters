@@ -75,8 +75,8 @@
     "settings_changed": "Réglages modifiés : {keys}",
     "report_exported": "Rapport de diagnostic exporté",
     "stats_restored": "Statistiques du jour restaurées après un redémarrage ({ok} lectures OK, {fail} en échec)",
-    "panel_under_adaptive": "Panneau {panel} sous-performant : {power} W pour {expected} W attendus à cette heure ({dev} % par rapport à sa production habituelle)",
-    "panel_daily": "Le {day}, le panneau {panel} a produit {energy} kWh, soit {dev} % sous sa part habituelle (attendu environ {expected} kWh) : encrassement, nouvel ombrage ou dégradation ?",
+    "panel_under_adaptive": "Panneau {panel} sous sa production habituelle : {power} W pour {expected} W attendus à cette heure ({dev} %). Ombre probable : vérifié dans le bilan du soir",
+    "panel_daily": "Le {day}, le panneau {panel} a produit {energy} kWh, soit {dev} % sous sa part habituelle (attendu environ {expected} kWh). Pour information : varie avec les nuages et les ombres saisonnières",
     "daily_learning": "Profil journalier des panneaux en apprentissage (jour {days} sur {min})",
     "baseline_reset": "Profil appris des panneaux réinitialisé",
     "slow_busy": "Réponse lente : {ms} ms avec une connexion rapide ({connect} ms) : logger occupé avec l'onduleur, pas un problème Wi-Fi",
@@ -98,7 +98,15 @@
     "counter_back": "Le compteur du jour de l'onduleur est revenu à {raw} kWh (redémarrage de l'onduleur en fin de journée) : la production du jour {kept} kWh est conservée",
     "standby_start": "Onduleur muet depuis le démarrage de l'app : considéré en veille de nuit (heure de fin de production inchangée)",
     "delay_default_changed": "Durée minimale de sous-performance relevée de 15 à {minutes} min (nouvelle valeur par défaut : une ombre met souvent plus longtemps à traverser un panneau)",
-    "baseline_migrated": "Profil des panneaux mis à niveau : l'apprentissage redémarre en heure solaire (plus de décalage d'une heure aux changements d'heure), uniquement en plein soleil. Les alertes de sous-performance reprennent après 3 jours ensoleillés ; le contrôle journalier est conservé."
+    "baseline_migrated": "Profil des panneaux mis à niveau : l'apprentissage redémarre en heure solaire (plus de décalage d'une heure aux changements d'heure), uniquement en plein soleil. Les alertes de sous-performance reprennent après 3 jours ensoleillés ; le contrôle journalier est conservé.",
+    "verdict_under": "Panneau {panel} : le {day}, en plein soleil, il n'a pas dépassé {best} % du meilleur panneau (habituellement {usual} %, soit {dev} % de moins, seuil {threshold} %). Une ombre ne baisse un panneau qu'une partie de la journée : à vérifier (encrassement, câble, diode, entrée de l'onduleur)",
+    "verdict_accepted": "Panneau {panel} : baisse confirmée {days} jours de soleil de suite ({best} % du meilleur panneau au lieu de {usual} %). Retenue comme nouvelle normale, plus d'alerte pour ce niveau",
+    "verdict_recovered": "Panneau {panel} : production revenue à la normale le {day} ({best} % du meilleur panneau)",
+    "verdict_ok": "Bilan des panneaux du {day} : tous normaux",
+    "verdict_cloudy": "Bilan des panneaux du {day} : pas assez de plein soleil pour juger",
+    "verdict_learning": "Bilan des panneaux en apprentissage (jour de soleil {days} sur {min})",
+    "alarm_seen": "L'onduleur signale : {status} (notification si cela dure plus de 5 min)",
+    "alarm_short": "Alarme passagère de l'onduleur terminée ({status}), sans notification"
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostic",
@@ -144,7 +152,7 @@
     "report_copied": "Rapport copié",
     "loading": "Préparation du rapport…",
     "bl_title": "Profil appris des panneaux",
-    "bl_intro": "Production habituelle de chaque panneau par rapport au meilleur panneau au même moment, heure par heure (100 % = plein soleil, valeurs basses = ombre récurrente). Appris uniquement en plein soleil ; les alertes de sous-performance comparent chaque panneau à ces valeurs, avec une tolérance de ±30 min.",
+    "bl_intro": "Production habituelle de chaque panneau par rapport au meilleur panneau au même moment, heure par heure (100 % = plein soleil, valeurs basses = ombre récurrente), apprise en plein soleil. Les alertes viennent du bilan du soir : chaque panneau doit atteindre au moins une fois dans la journée sa meilleure part habituelle. Une ombre ne baisse un panneau qu'une partie de la journée et n'est donc jamais signalée ; un défaut le baisse toute la journée. Le seuil s'élargit tout seul pour un panneau naturellement irrégulier, et une baisse confirmée 7 jours de soleil devient la nouvelle normale.",
     "bl_mode_adaptive": "Détection adaptative",
     "bl_mode_simple": "Détection simple (profil appris mais non utilisé)",
     "bl_slots": "Tranches horaires apprises",
@@ -167,7 +175,9 @@
     "st_forecast_factor": "facteur",
     "st_forecast_error": "erreur moyenne à J-1",
     "st_forecast_days": "jours",
-    "st_forecast_fetched": "téléchargée"
+    "st_forecast_fetched": "téléchargée",
+    "bl_best": "Meilleure part du jour (bilan du soir)",
+    "bl_spread": "écart habituel"
   },
   "widget": {
     "today": "Aujourd'hui",

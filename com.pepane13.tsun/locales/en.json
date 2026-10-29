@@ -75,8 +75,8 @@
     "settings_changed": "Settings changed: {keys}",
     "report_exported": "Diagnostic report exported",
     "stats_restored": "Today's statistics restored after a restart ({ok} reads OK, {fail} failed)",
-    "panel_under_adaptive": "Panel {panel} underperforming: {power} W for {expected} W expected at this time ({dev} % compared with its usual production)",
-    "panel_daily": "On {day}, panel {panel} produced {energy} kWh, {dev} % below its usual share (expected about {expected} kWh): dirt, new shadow or degradation?",
+    "panel_under_adaptive": "Panel {panel} below its usual production: {power} W for {expected} W expected at this time ({dev} %). Probably a shadow: checked in the evening verdict",
+    "panel_daily": "On {day}, panel {panel} produced {energy} kWh, {dev} % below its usual share (expected about {expected} kWh). For information: varies with clouds and seasonal shadows",
     "daily_learning": "Daily panel profile being learned (day {days} of {min})",
     "baseline_reset": "Learned panel profile reset",
     "slow_busy": "Slow answer: {ms} ms with a fast connection ({connect} ms): logger busy with the inverter, not a Wi-Fi issue",
@@ -98,7 +98,15 @@
     "counter_back": "The inverter daily counter went back to {raw} kWh (evening restart of the inverter): the day's yield {kept} kWh is kept",
     "standby_start": "Inverter not answering since the app started: considered in night standby (end of production time not changed)",
     "delay_default_changed": "Underperformance minimum duration raised from 15 to {minutes} min (new default: shadows often take longer to cross a panel)",
-    "baseline_migrated": "Panel profile upgraded: learning restarts in solar time (no more one-hour shift at summer/winter time changes), only in direct sun. Underperformance alerts resume after 3 sunny days; the daily check is kept."
+    "baseline_migrated": "Panel profile upgraded: learning restarts in solar time (no more one-hour shift at summer/winter time changes), only in direct sun. Underperformance alerts resume after 3 sunny days; the daily check is kept.",
+    "verdict_under": "Panel {panel}: on {day}, in direct sun, it did not exceed {best} % of the best panel (usually {usual} %, {dev} % less, threshold {threshold} %). A shadow only lowers a panel for part of the day: worth checking (dirt, cable, diode, inverter input)",
+    "verdict_accepted": "Panel {panel}: drop confirmed on {days} sunny days in a row ({best} % of the best panel instead of {usual} %). Accepted as the new normal, no more alerts at this level",
+    "verdict_recovered": "Panel {panel}: production back to normal on {day} ({best} % of the best panel)",
+    "verdict_ok": "Panel verdict for {day}: all normal",
+    "verdict_cloudy": "Panel verdict for {day}: not enough direct sun to judge",
+    "verdict_learning": "Panel verdict being learned (sunny day {days} of {min})",
+    "alarm_seen": "Inverter reports {status} (notification if it lasts more than 5 min)",
+    "alarm_short": "Short inverter alarm over ({status}), not notified"
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostics",
@@ -144,7 +152,7 @@
     "report_copied": "Report copied",
     "loading": "Preparing the report…",
     "bl_title": "Learned panel profile",
-    "bl_intro": "Usual production of each panel compared with the best panel at the same moment, by hour (100 % = full sun, low values = recurring shadow). Learned in direct sun only; underperformance alerts compare each panel with these values, with a ±30 min tolerance.",
+    "bl_intro": "Usual production of each panel compared with the best panel at the same moment, by hour (100 % = full sun, low values = recurring shadow), learned in direct sun. Alerts come from the evening verdict: each panel must reach its usual best share at least once during the day. A shadow only lowers a panel for part of the day and is never reported; a defect lowers it all day. The threshold widens by itself for a naturally irregular panel, and a drop confirmed on 7 sunny days becomes the new normal.",
     "bl_mode_adaptive": "Adaptive detection",
     "bl_mode_simple": "Simple detection (profile learned but not used)",
     "bl_slots": "Time slots learned",
@@ -167,7 +175,9 @@
     "st_forecast_factor": "factor",
     "st_forecast_error": "average day-ahead error",
     "st_forecast_days": "days",
-    "st_forecast_fetched": "downloaded"
+    "st_forecast_fetched": "downloaded",
+    "bl_best": "Best share of the day (evening verdict)",
+    "bl_spread": "usual spread"
   },
   "widget": {
     "today": "Today",

@@ -6,7 +6,7 @@ Fully local (cloud-free) monitoring of a TSUN TSOL-MX3000D micro-inverter throug
 
 - Solar panel in the Homey **Energy** tab (live production and cumulative meter)
 - Live power and daily yield **per panel**
-- Adaptive panel monitoring: each panel compared with its own learned production profile in solar time and direct sun only (recurring and drifting shadows ignored), daily degradation check
+- Self-learning panel alerts: each evening, each panel must have reached its usual best share of the day in direct sun; shadows (even seasonal ones) are never reported, the threshold adapts to each panel's natural spread and a lasting change becomes the new normal after 7 sunny days. Real-time comparison with the learned profile in solar time for Flow cards
 - Dashboard widget: panels drawn in their roof layout with live production, plus a top band with power, daily and total yield, peak, grid, temperature, DC→AC efficiency and logger link
 - Flow cards: panel underperforming / back to normal, inverter status changed
 - Optional production forecast: hourly Open-Meteo irradiance forecast on the panel plane, calibrated hour by hour on the measured production, with Flow cards (forecast between two times, number token for Advanced Flows)

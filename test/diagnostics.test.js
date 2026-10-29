@@ -205,7 +205,18 @@ function setRegs({
   ok(!!lastLog(/Low conversion efficiency: 70\.7 %/), 'low DC→AC efficiency logged');
   setRegs({ alarms: 4 });
   await d._poll();
-  ok(logs('error').some((e) => /reports Alarm 0x0004/.test(e.m)) && mock._notifications.some((n) => /Alarm 0x0004/.test(n)), 'inverter alarm: error and notification');
+  ok(!mock._notifications.some((n) => /Alarm 0x0004/.test(n)) && logs('info').some((e) => /Alarm 0x0004 \(notification if it lasts/.test(e.m)), 'inverter alarm: traced at once, not notified yet');
+  d.alarmWatch.since -= 6 * 60000; // still there 6 min later
+  await d._poll();
+  ok(logs('error').some((e) => /reports Alarm 0x0004/.test(e.m)) && mock._notifications.some((n) => /Alarm 0x0004/.test(n)), 'inverter alarm lasting 5 min: error and notification');
+  const nA = mock._notifications.length;
+  setRegs({ alarms: 0 });
+  await d._poll();
+  setRegs({ alarms: 8 });
+  await d._poll();
+  setRegs({ alarms: 0 });
+  await d._poll();
+  ok(mock._notifications.length === nA && logs('info').some((e) => /Short inverter alarm over/.test(e.m)), 'short alarm (wake-up glitch): traced, not notified');
 
   // Panel not producing (0 V -> disconnected)
   const t0 = Date.now();

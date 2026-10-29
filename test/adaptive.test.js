@@ -101,7 +101,8 @@ const utc = (day, hhmm) => Date.parse(`${day}T${hhmm}:00Z`);
   const t = trig('panel_underperforming');
   ok(t.length === 1 && t[0].tokens.panel === 4, 'anomaly vs learned profile: PV4 reported');
   ok(t.length === 1 && t[0].tokens.expected >= 300 && t[0].tokens.deviation <= -40, `alert tokens: expected ${t[0] && t[0].tokens.expected} W, deviation ${t[0] && t[0].tokens.deviation} %`);
-  ok(/for 3\d\d(\.\d)? W expected at this time/.test(lastLog(/Panel 4 underperforming/).m), 'adaptive message mentions the expected power');
+  ok(/for 3\d\d(\.\d)? W expected at this time/.test(lastLog(/Panel 4 below its usual/).m), 'adaptive message mentions the expected power');
+  ok(!mock._notifications.some((n) => /Panel 4/.test(n)), 'adaptive real-time deviation: Flow card only, no notification (left to the evening verdict)');
   const shareFlagged = d.baseline.slots[57].r[3];
   await run('2026-10-20', [350, 245, 350, 175, 350, 350], '14:26', 10);
   ok(Math.abs(d.baseline.slots[57].r[3] - shareFlagged) < 1e-9, 'confirmed anomaly not learned as normal');
@@ -130,12 +131,82 @@ const utc = (day, hhmm) => Date.parse(`${day}T${hhmm}:00Z`);
   ok(!!lastLog(/being learned \(day 7 of 7\)/), 'daily check: learning phase logged (7 days)');
   setEnergy([1.5, 1.2, 1.5, 1.2, 1.6, 1.5]); // PV4 -20 %
   await d._checkDailyShares('2026-10-08');
-  ok(/panel 4 produced 1\.2 kWh, 17\.2 % below/.test(lastLog(/produced/).m) && mock._notifications.some((n) => /panel 4 produced/.test(n)), 'daily check: PV4 degradation reported and notified');
+  ok(/panel 4 produced 1\.2 kWh, 17\.2 % below/.test(lastLog(/produced/).m) && !mock._notifications.some((n) => /panel 4 produced/.test(n)), 'daily yield share: logged for information, not notified (depends on clouds and seasonal shadows)');
   ok(!lastLog(/panel 2 produced/), 'daily check: PV2 usual lower share not reported');
   setEnergy([0.1, 0.1, 0.1, 0.1, 0.1, 0.1]);
   const daysBefore = d.baseline.daily.days;
   await d._checkDailyShares('2026-10-09');
   ok(d.baseline.daily.days === daysBefore, 'daily check: dull day (< 1 kWh) ignored');
+
+  // ---------- Day verdict (best share of the day) ----------
+  {
+    const v = new PanelBaseline(6);
+    const sunnyDay = (dd, at) => { // 10 slots (2.5 h) of direct sun, 10 samples each
+      for (let sl = 40; sl < 50; sl++) for (let k = 0; k < 10; k++) v.learn(sl, at(sl), dd);
+    };
+    // PV2 shaded until slot 45 (deeper every day: seasonal shadow), then in full sun
+    const shadow = (depth) => (sl) => (sl < 45 ? [350, 350 * depth, 350, 340, 350, 345] : [350, 345, 350, 340, 350, 345]);
+    let res;
+    for (let k = 0; k < 5; k++) { sunnyDay(`2026-11-0${k + 1}`, shadow(0.8 - k * 0.1)); res = v.verdict(`2026-11-0${k + 1}`, 10); }
+    ok(!res.ready && v.best.days === 5, 'verdict: learning on the first 5 sunny days');
+    sunnyDay('2026-11-06', shadow(0.1));
+    res = v.verdict('2026-11-06', 10);
+    ok(res.ready && res.panels.every((p) => p.state === 'ok'), 'verdict: a shadow growing every day (seasonal) is never reported, the panel reaches its usual best share later');
+    ok(v.verdict('2026-11-06', 10).done, 'verdict: only once per day');
+    // cloudy day: not enough direct sun
+    for (let k = 0; k < 10; k++) v.learn(40, [350, 345, 350, 340, 350, 345], '2026-11-07');
+    ok(!v.verdict('2026-11-07', 10).sunny, 'verdict: day with too little direct sun not judged');
+    // real defect: PV4 at 66 % all day (bypass diode)
+    const diode = () => [350, 345, 350, 231, 350, 345];
+    sunnyDay('2026-11-08', diode);
+    res = v.verdict('2026-11-08', 10);
+    ok(res.panels[3].state === 'new' && res.panels[3].dev < -30 && res.panels.filter((p) => p.state !== 'ok').length === 1, `verdict: PV4 defect reported (${res.panels[3].dev.toFixed(1)} %)`);
+    const ref4 = v.best.ref[3];
+    sunnyDay('2026-11-09', diode);
+    res = v.verdict('2026-11-09', 10);
+    ok(res.panels[3].state === 'ongoing' && v.best.ref[3] === ref4, 'verdict: anomaly in progress not learned, not notified again');
+    for (let k = 10; k <= 14; k++) { sunnyDay(`2026-11-${k}`, diode); res = v.verdict(`2026-11-${k}`, 10); }
+    ok(res.panels[3].state === 'accepted' && Math.abs(v.best.ref[3] - 231 / 350) < 1e-6, 'verdict: change confirmed 7 sunny days -> accepted as the new normal');
+    sunnyDay('2026-11-15', diode);
+    ok(v.verdict('2026-11-15', 10).panels[3].state === 'ok', 'verdict: no more alert at the accepted level');
+    // irregular panel: learned spread widens its own threshold
+    const w = new PanelBaseline(6);
+    const irr = [0.98, 0.84, 0.97, 0.85, 0.99, 0.86];
+    irr.forEach((x, k) => { for (let sl = 40; sl < 50; sl++) for (let n = 0; n < 10; n++) w.learn(sl, [350, 350 * x, 350, 350, 350, 350], `2026-12-0${k + 1}`); w.verdict(`2026-12-0${k + 1}`, 10); });
+    for (let sl = 40; sl < 50; sl++) for (let n = 0; n < 10; n++) w.learn(sl, [350, 350 * 0.82, 350, 350, 350, 350], '2026-12-07');
+    res = w.verdict('2026-12-07', 10);
+    ok(res.panels[1].threshold > 10 && res.panels[1].state === 'ok', `verdict: naturally irregular panel -> threshold widened to ${res.panels[1].threshold.toFixed(1)} %, no false alert`);
+    const v2 = new PanelBaseline(6, JSON.parse(JSON.stringify(v.toJSON())));
+    ok(v2.best.days === v.best.days && Math.abs(v2.best.ref[3] - v.best.ref[3]) < 1e-4, 'verdict: learned values saved and restored');
+    // today's accumulation survives a restart
+    for (let k = 0; k < 10; k++) v.learn(42, [350, 345, 350, 340, 350, 345], '2026-11-16');
+    const v3 = new PanelBaseline(6, JSON.parse(JSON.stringify(v.toJSON())));
+    ok(v3.today.day === '2026-11-16' && v3.today.slots[42].n === 10, 'verdict: today\'s samples kept across an app restart');
+  }
+
+  // Device: notification at the evening verdict
+  {
+    mock._notifications.length = 0;
+    const dv = new D(manifest, { ...settings });
+    let dday = '2026-11-01';
+    dv._todayKey = () => dday;
+    await dv.onInit();
+    dv._clear();
+    const sunny = async (dd, powers) => {
+      dday = dd;
+      for (let m = 0; m < 150; m++) await dv._checkPanels(powers, utc(dd, '10:00') + m * 60000);
+    };
+    for (let k = 1; k <= 5; k++) { await sunny(`2026-11-0${k}`, [350, 345, 350, 340, 350, 345]); await dv._panelVerdict(`2026-11-0${k}`); }
+    ok(!!lastLog(/verdict being learned \(sunny day 5 of 5\)/), 'device verdict: learning logged');
+    await sunny('2026-11-06', [350, 345, 350, 340, 350, 345]);
+    await dv._panelVerdict('2026-11-06');
+    ok(!!lastLog(/Panel verdict for 2026-11-06: all normal/) && mock._notifications.length === 0, 'device verdict: normal day, no notification');
+    await sunny('2026-11-07', [350, 345, 350, 220, 350, 345]);
+    await dv._panelVerdict('2026-11-07');
+    ok(mock._notifications.filter((n) => /Panel 4: on 2026-11-07, in direct sun, it did not exceed 63 %/.test(n)).length === 1, 'device verdict: PV4 defect notified once in the evening');
+    await dv._panelVerdict('2026-11-07');
+    ok(mock._notifications.length === 1, 'device verdict: not repeated (evening sleep then day change)');
+  }
 
   // ---------- Summary, persistence, migration, reset, report ----------
   const off = d._utcOffsetMin();
