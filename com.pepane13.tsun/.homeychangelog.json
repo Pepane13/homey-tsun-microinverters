@@ -1,4 +1,8 @@
 {
+  "1.7.3": {
+    "en": "Thermal derating is only reported when the power stays capped for 5 minutes, close to the temperature limit and with a clear voltage rise: passing clouds no longer raise false alerts.",
+    "fr": "Le bridage thermique n'est signalé que si la puissance reste plafonnée 5 minutes, près de la limite de température et avec une nette hausse de tension : les nuages passagers ne déclenchent plus de fausse alerte."
+  },
   "1.7.2": {
     "en": "New App Store images and driver icon, shorter description.",
     "fr": "Nouvelles images et nouvelle icône de l'appareil, description plus courte."

@@ -86,7 +86,7 @@
     "read_fail_repeated": "{count} consecutive failed reads while the inverter was producing {power} W: {cause} [{code}]",
     "temp_default_changed": "Temperature alert raised from 80 to {limit} °C (new default: 80 °C is normal for this inverter on sunny days)",
     "startup_grace": "Inverter unreachable for {minutes} min just after the app started (Homey or network restarting): no alert yet",
-    "derating": "Possible thermal derating at {temp} °C: DC power down from {before} to {after} W in 5 min while the panel voltage rose on {panels} panels",
+    "derating": "Probable thermal derating at {temp} °C: DC power down from {before} to {after} W and capped for 5 min, while the panel voltage rose clearly on {panels} panels",
     "forecast_updated": "Forecast updated: today {today} kWh (remaining {remaining} kWh), tomorrow {tomorrow} kWh",
     "forecast_failed": "Weather forecast download failed: {message}. Next attempt in 15 min.",
     "forecast_restored": "Weather forecast downloaded again",
@@ -106,7 +106,9 @@
     "verdict_cloudy": "Panel verdict for {day}: not enough direct sun to judge",
     "verdict_learning": "Panel verdict being learned (sunny day {days} of {min})",
     "alarm_seen": "Inverter reports {status} (notification if it lasts more than 5 min)",
-    "alarm_short": "Short inverter alarm over ({status}), not notified"
+    "alarm_short": "Short inverter alarm over ({status}), not notified",
+    "derating_watch": "Power drop at {temp} °C ({before} → {after} W) with the voltage rising on {panels} panels: watching for a derating plateau",
+    "derating_cloud": "Power drop at {temp} °C ({before} → {after} W) not followed by a plateau: passing cloud, not derating"
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostics",

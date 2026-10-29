@@ -37,10 +37,13 @@ const TEMP_ALERT_DEFAULT = 90; // °C, default of the temperature alert setting 
 // so the panel power falls while the panel voltage rises (a cloud lowers power without raising voltage)
 const DERATE_WINDOW_MS = 5 * 60 * 1000; // comparison over 5 min
 const DERATE_POWER_DROP = 0.10; // DC power down by at least 10 %...
-const DERATE_VOLTAGE_RISE = 0.04; // ...while the voltage rises by at least 4 %...
+const DERATE_VOLTAGE_RISE = 0.08; // ...while the voltage rises by at least 8 % (4 % before v1.7.3: a cooling panel gains a few %)...
 const DERATE_MIN_PANELS = 4; // ...on at least 4 of the 6 panels
 const DERATE_MIN_DC_W = 600; // only with a significant production
-const DERATE_TEMP_MARGIN = 15; // and an inverter temperature within 15 °C of the alert limit
+const DERATE_TEMP_MARGIN = 5; // and an inverter temperature within 5 °C of the alert limit (15 before v1.7.3)
+const DERATE_PLATEAU_MS = 5 * 60 * 1000; // then the power must stay low and flat for 5 min (a cloud passes or flickers)
+const DERATE_RECOVERED = 0.95; // back above 95 % of the power before the drop: passing cloud, not derating
+const DERATE_PLATEAU_SPREAD = 0.10; // max-min spread of the DC power over the plateau, relative to its max
 // Production forecast (optional, lib/forecast.js)
 const HOUR_MS = SolarForecast.HOUR_MS;
 const FORECAST_REFRESH_MIN = 60; // weather forecast refreshed every hour
@@ -134,6 +137,7 @@ module.exports = class Mx3000dDevice extends Homey.Device {
     // Communication tracking
     this.comm = { window: [], lastOk: null, outage: null, lastError: null, lastLatency: null };
     this.startedAt = Date.now();
+    this.derateCandidate = null; // drop waiting for its plateau (thermal derating)
     this.history = []; // recent readings for the thermal derating check: { t, temp, panels: [{ p, v }] }
     this._restoreLastOk();
     this.dayStats = newDayStats();
@@ -855,17 +859,49 @@ module.exports = class Mx3000dDevice extends Homey.Device {
 
   /**
    * Thermal derating check. When hot, the inverter limits its power by moving the panels'
-   * operating point towards the open-circuit voltage: the power falls and the voltage rises at
-   * the same time on most panels. A passing cloud lowers the power without raising the voltage.
-   * Compared with the reading closest to 5 minutes earlier.
+   * operating point towards the open-circuit voltage: the power falls and the voltage rises
+   * clearly at the same time on most panels, then the power stays capped on a plateau.
+   * A passing cloud also lowers all panels at once and its cooling raises their voltage a little,
+   * but the power then recovers or flickers: a drop is only reported after a 5-minute plateau.
+   * Returns true when a derating is confirmed (notified).
    */
   async _checkDerating(d, now, tLimit) {
     this.history.push({ t: now, temp: d.temperature, panels: d.panels.map((p) => ({ p: p.power, v: p.voltage })) });
     this.history = this.history.filter((h) => now - h.t <= DERATE_WINDOW_MS * 2);
+    const dcNow = d.panels.reduce((s, p) => s + p.power, 0);
+
+    // A candidate drop is waiting for its plateau
+    const c = this.derateCandidate;
+    if (c) {
+      c.samples.push(dcNow);
+      if (dcNow >= c.before * DERATE_RECOVERED) {
+        this.derateCandidate = null;
+        this._diag('info', 'inverter', this._t('diag.derating_cloud', {
+          temp: c.temp, before: Math.round(c.before), after: Math.round(c.after),
+        }));
+        return false;
+      }
+      if (now - c.since < DERATE_PLATEAU_MS) return false;
+      this.derateCandidate = null;
+      const max = Math.max(...c.samples);
+      const min = Math.min(...c.samples);
+      const flat = max <= c.before * (1 - DERATE_POWER_DROP) && (max - min) <= max * DERATE_PLATEAU_SPREAD;
+      if (!flat) {
+        this._diag('info', 'inverter', this._t('diag.derating_cloud', {
+          temp: c.temp, before: Math.round(c.before), after: Math.round(c.after),
+        }));
+        return false;
+      }
+      const msg = this._t('diag.derating', {
+        temp: c.temp, before: Math.round(c.before), after: Math.round(dcNow), panels: c.panels,
+      });
+      if (this._diagOnce('derate', RATE_LIMIT_MIN, 'warn', 'inverter', msg)) await this._notify('notify_alarm', msg);
+      return true;
+    }
+
     if (d.temperature < tLimit - DERATE_TEMP_MARGIN) return false;
     const ref = this.history.find((h) => now - h.t >= DERATE_WINDOW_MS);
     if (!ref) return false;
-    const dcNow = d.panels.reduce((s, p) => s + p.power, 0);
     const dcRef = ref.panels.reduce((s, p) => s + p.p, 0);
     if (dcRef < DERATE_MIN_DC_W || dcNow > dcRef * (1 - DERATE_POWER_DROP)) return false;
     const signature = d.panels.filter((p, i) => {
@@ -873,11 +909,13 @@ module.exports = class Mx3000dDevice extends Homey.Device {
       return r.p > 0 && r.v > 0 && p.power <= r.p * (1 - DERATE_POWER_DROP) && p.voltage >= r.v * (1 + DERATE_VOLTAGE_RISE);
     }).length;
     if (signature < DERATE_MIN_PANELS) return false;
-    const msg = this._t('diag.derating', {
+    this.derateCandidate = {
+      since: now, before: dcRef, after: dcNow, temp: d.temperature, panels: signature, samples: [dcNow],
+    };
+    this._diag('debug', 'inverter', this._t('diag.derating_watch', {
       temp: d.temperature, before: Math.round(dcRef), after: Math.round(dcNow), panels: signature,
-    });
-    if (this._diagOnce('derate', RATE_LIMIT_MIN, 'warn', 'inverter', msg)) await this._notify('notify_alarm', msg);
-    return true;
+    }));
+    return false;
   }
 
   // ---------- Panel checks ----------

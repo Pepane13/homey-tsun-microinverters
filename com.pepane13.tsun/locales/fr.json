@@ -86,7 +86,7 @@
     "read_fail_repeated": "{count} lectures consécutives en échec alors que l'onduleur produisait {power} W : {cause} [{code}]",
     "temp_default_changed": "Alerte température relevée de 80 à {limit} °C (nouvelle valeur par défaut : 80 °C est normal pour cet onduleur par beau temps)",
     "startup_grace": "Onduleur injoignable depuis {minutes} min juste après le démarrage de l'app (Homey ou réseau en cours de redémarrage) : pas encore d'alerte",
-    "derating": "Bridage thermique probable à {temp} °C : puissance DC passée de {before} à {after} W en 5 min alors que la tension a monté sur {panels} panneaux",
+    "derating": "Bridage thermique probable à {temp} °C : puissance DC passée de {before} à {after} W et plafonnée pendant 5 min, alors que la tension a nettement monté sur {panels} panneaux",
     "forecast_updated": "Prévision mise à jour : aujourd'hui {today} kWh (restant {remaining} kWh), demain {tomorrow} kWh",
     "forecast_failed": "Échec du téléchargement de la prévision météo : {message}. Nouvel essai dans 15 min.",
     "forecast_restored": "Prévision météo de nouveau téléchargée",
@@ -106,7 +106,9 @@
     "verdict_cloudy": "Bilan des panneaux du {day} : pas assez de plein soleil pour juger",
     "verdict_learning": "Bilan des panneaux en apprentissage (jour de soleil {days} sur {min})",
     "alarm_seen": "L'onduleur signale : {status} (notification si cela dure plus de 5 min)",
-    "alarm_short": "Alarme passagère de l'onduleur terminée ({status}), sans notification"
+    "alarm_short": "Alarme passagère de l'onduleur terminée ({status}), sans notification",
+    "derating_watch": "Baisse de puissance à {temp} °C ({before} → {after} W) avec tension en hausse sur {panels} panneaux : surveillance d'un palier de bridage",
+    "derating_cloud": "Baisse de puissance à {temp} °C ({before} → {after} W) sans palier ensuite : nuage passager, pas de bridage"
   },
   "settings": {
     "title": "TSUN Micro-inverters – Diagnostic",

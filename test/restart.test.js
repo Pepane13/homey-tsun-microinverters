@@ -78,19 +78,43 @@ const reading = (temp, panels) => ({
   ok(n.store.lastOk && n.store.lastOk.power === 399.5, `production detected: last reading saved (${n.store.lastOk && n.store.lastOk.power} W)`);
 
   // ---------- Thermal derating signature ----------
-  const t = await newDevice();
   const t0 = Date.parse('2026-10-26T12:00:00Z');
+  const min = (m) => t0 + m * 60000;
   const before = Array(6).fill([375, 30.0]);
-  const derated = [[320, 32.0], [318, 31.9], [322, 32.1], [330, 31.6], [319, 32.0], [360, 30.3]];
-  const cloud = Array(6).fill([250, 29.6]);
-  ok(!(await t._checkDerating(reading(81, before), t0, 90)), 'derating: no reference yet');
-  ok(await t._checkDerating(reading(81, derated), t0 + 5.5 * 60000, 90) && /Possible thermal derating at 81 °C: DC power down from 2250 to 1969 W/.test(lastLog(/thermal derating/).m), 'derating: power -12 % with voltage +6 % on 5 panels at 81 °C -> reported');
+  const derated = [[320, 33.0], [318, 32.9], [322, 33.1], [330, 32.6], [319, 33.0], [360, 30.3]]; // -12 %, voltage +10 % on 5 panels
+  const t = await newDevice();
+  ok(!(await t._checkDerating(reading(88, before), min(0), 90)), 'derating: no reference yet');
+  ok(!(await t._checkDerating(reading(88, derated), min(5.5), 90)) && !!t.derateCandidate, 'derating: drop with a clear voltage rise at 88 °C -> watched, not reported yet');
+  let reported = false;
+  for (let m = 6; m <= 11; m++) reported = (await t._checkDerating(reading(88, derated), min(m), 90)) || reported;
+  ok(reported && /Probable thermal derating at 88 °C: DC power down from 2250 to 1969 W and capped for 5 min/.test(lastLog(/thermal derating/).m), 'derating: power capped on a 5-min plateau -> reported');
+
+  // 29/10 13:08 (real case): cloud, -54 % in 5 min with the voltage up on 4 panels, back to full power 10 min later
   const c = await newDevice();
-  await c._checkDerating(reading(81, before), t0, 90);
-  ok(!(await c._checkDerating(reading(81, cloud), t0 + 5.5 * 60000, 90)), 'cloud: power -33 % without voltage rise -> not derating');
+  const shade = [[160, 33.2], [165, 33.1], [158, 33.3], [170, 33.0], [190, 31.0], [150, 30.2]];
+  await c._checkDerating(reading(88, before), min(0), 90);
+  await c._checkDerating(reading(88, shade), min(5.5), 90);
+  await c._checkDerating(reading(87, shade), min(7), 90);
+  ok(!(await c._checkDerating(reading(86, before), min(10), 90)) && !c.derateCandidate && !!lastLog(/passing cloud, not derating/), '29/10 13:08: drop then recovery -> passing cloud, not reported');
+  // 29/10 12:26 (real case): power flickering under thin clouds
+  const f = await newDevice();
+  await f._checkDerating(reading(88, before), min(0), 90);
+  await f._checkDerating(reading(88, derated), min(5.5), 90);
+  let fr = false;
+  for (const [k, ratio] of [[6, 0.80], [7, 0.93], [8, 0.78], [9, 0.92], [10, 0.80], [11, 0.90]]) {
+    fr = (await f._checkDerating(reading(88, before.map(([p, v]) => [p * ratio, v * 1.09])), min(k), 90)) || fr;
+  }
+  ok(!fr && !!lastLog(/not followed by a plateau/), '29/10 12:26: flickering power -> no plateau, not reported');
+  // Small voltage rise (cooling panels under a cloud) is not a derating signature any more
+  const g = await newDevice();
+  await g._checkDerating(reading(88, before), min(0), 90);
+  await g._checkDerating(reading(88, Array(6).fill([320, 31.5])), min(5.5), 90);
+  ok(!g.derateCandidate, 'voltage +5 % only (cooling panels) -> not watched');
+  // Too far below the alert limit
   const cool = await newDevice();
-  await cool._checkDerating(reading(60, before), t0, 90);
-  ok(!(await cool._checkDerating(reading(60, derated), t0 + 5.5 * 60000, 90)), 'same signature at 60 °C (far from the limit) -> ignored');
+  await cool._checkDerating(reading(79, before), min(0), 90);
+  await cool._checkDerating(reading(79, derated), min(5.5), 90);
+  ok(!cool.derateCandidate, 'same signature at 79 °C (more than 5 °C below the 90 °C limit) -> ignored');
 
   srv.close();
   console.log(failures ? `\n${failures} FAILED` : '\nAll restart tests passed');
