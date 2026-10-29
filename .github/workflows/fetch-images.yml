@@ -1,0 +1,37 @@
+name: Fetch images (staging)
+
+# Downloads images from the web into the 'image-staging' branch, so that they can be reviewed
+# and processed (crop, background removal) before being added to the app.
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'Space-separated list of name=URL'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download
+        env:
+          URLS: ${{ inputs.urls }}
+        run: |
+          git fetch origin image-staging && git checkout image-staging || git checkout --orphan image-staging
+          git rm -rq --cached . 2>/dev/null || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name staging -exec rm -rf {} +
+          mkdir -p staging
+          for pair in $URLS; do
+            name="${pair%%=*}"; url="${pair#*=}"
+            curl -fsSL -A "Mozilla/5.0" -o "staging/$name" "$url" && echo "OK $name" || echo "FAILED $name"
+          done
+          ls -la staging
+          git config user.name "github-actions[bot]"
+          git config user.email "41898315+github-actions[bot]@users.noreply.github.com"
+          git add staging
+          git commit -qm "Staged images" || exit 0
+          git push -q origin image-staging
