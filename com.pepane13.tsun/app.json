@@ -212,9 +212,9 @@
         "lan"
       ],
       "images": {
-        "small": "/drivers/mx3000d/assets/images/small.jpg",
-        "large": "/drivers/mx3000d/assets/images/large.jpg",
-        "xlarge": "/drivers/mx3000d/assets/images/xlarge.jpg"
+        "small": "/drivers/mx3000d/assets/images/small.png",
+        "large": "/drivers/mx3000d/assets/images/large.png",
+        "xlarge": "/drivers/mx3000d/assets/images/xlarge.png"
       },
       "pair": [
         {
