@@ -1,0 +1,30 @@
+name: Tests & validation
+# On every push and pull request: unit tests and Homey App Store validation (no secret needed).
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Tests and validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Unit tests
+        run: |
+          set -e
+          for t in test/*.test.js; do
+            echo "::group::$t"
+            node "$t"
+            echo "::endgroup::"
+          done
+
+      - name: Homey App Store validation (level publish)
+        working-directory: com.pepane13.tsun
+        run: npx --yes homey app validate --level publish

@@ -29,6 +29,7 @@ Fully local (cloud-free) monitoring of a TSUN TSOL-MX3000D micro-inverter throug
 | `test/daysummary.test.js` | Daily summary tests on real sequences (dusk counter reset, dawn/dusk flapping, restart at night): `node test/daysummary.test.js` |
 | `test/forecast.test.js` | Production forecast tests (Open-Meteo parsing, calibration, accuracy, Flow cards): `node test/forecast.test.js` |
 | `test/widget.test.js` | Dashboard widget tests (data, manifest, rendering in Chromium if Playwright is installed): `node test/widget.test.js` |
+| `.github/workflows/` | `tests.yml`: tests and App Store validation on every push; `publish.yml`: manual publication to the Homey App Store (secret `HOMEY_PAT`) |
 | `install.cmd` | Windows installer: Node.js and Homey CLI checks, git pull, `homey app install`, optional `homey app publish` (double-click; `publish` / `nopublish` options) |
 | `tsun_compare.js` | Detailed command-line reading using the app code: `node tsun_compare.js <logger_ip> <logger_sn> [interval_s]` |
 
@@ -62,6 +63,16 @@ homey app install
 ```
 
 ## Publishing to the Homey App Store
+
+### From GitHub (recommended, no PC needed)
+
+1. Once: create a personal access token at https://tools.developer.homey.app/me and add it to the repository as the Actions secret **`HOMEY_PAT`** (Settings → Secrets and variables → Actions → New repository secret).
+2. Raise the version in `com.pepane13.tsun/app.json` and `package.json` and add its entry to `.homeychangelog.json` (English required, French optional).
+3. Actions tab → **Publish to the Homey App Store** → **Run workflow**. The workflow refuses a version already tagged, runs the tests, publishes the build with `homey app publish` in headless mode, then tags the commit `vX.Y.Z` and creates the GitHub release with the changelog.
+
+Every push also runs **Tests & validation** (unit tests + `homey app validate --level publish`).
+
+### From a PC
 
 `install.cmd` ends with an optional publish step: after installing on your Homey it asks whether to publish (no answer within 60 s = no). `install.cmd publish` publishes without asking, `install.cmd nopublish` only installs. The CLI runs in headless mode: the version number comes from `app.json` (never bumped by the CLI), the changelog from `.homeychangelog.json`, and on a git clone the published version is tagged `vX.Y.Z` and the tag pushed.
 

@@ -1,0 +1,82 @@
+name: Publish to the Homey App Store
+# Manual: Actions tab -> "Publish to the Homey App Store" -> Run workflow.
+# Publishes the version found in com.pepane13.tsun/app.json (never bumped here) with its
+# .homeychangelog.json entry, as a new build in the Homey Developer Tools (Draft), then tags the
+# commit vX.Y.Z and creates the matching GitHub release.
+# Requires the repository secret HOMEY_PAT (personal access token from
+# https://tools.developer.homey.app/me).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write # tag + release
+
+concurrency:
+  group: homey-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags, to refuse a version already published
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Version and changelog checks
+        id: version
+        env:
+          HOMEY_PAT: ${{ secrets.HOMEY_PAT }}
+        run: |
+          set -e
+          VERSION=$(node -p "require('./com.pepane13.tsun/app.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::v$VERSION is already tagged (already published). Raise the version in app.json and package.json first."
+            exit 1
+          fi
+          node -e "
+            const c = require('./com.pepane13.tsun/.homeychangelog.json')['$VERSION'];
+            if (!c || !c.en) { console.error('No English changelog for $VERSION in .homeychangelog.json'); process.exit(1); }
+            require('fs').writeFileSync('release-notes.md', c.en + (c.fr ? '\n\n---\n\n' + c.fr : '') + '\n');
+          "
+          test -n "$HOMEY_PAT" || { echo "::error::Repository secret HOMEY_PAT missing (https://tools.developer.homey.app/me)."; exit 1; }
+
+      - name: Unit tests
+        run: |
+          set -e
+          for t in test/*.test.js; do
+            echo "::group::$t"
+            node "$t"
+            echo "::endgroup::"
+          done
+
+      - name: Publish to the Homey App Store
+        working-directory: com.pepane13.tsun
+        env:
+          HOMEY_PAT: ${{ secrets.HOMEY_PAT }}
+          HOMEY_HEADLESS: '1' # no prompts: version from app.json, changelog from .homeychangelog.json
+        run: npx --yes homey app publish
+
+      - name: Tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          V="v${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$V" -m "TSUN Micro-inverters $V"
+          git push origin "$V"
+          gh release create "$V" --title "$V" --notes-file release-notes.md
+
+      - name: Summary
+        run: |
+          echo "### TSUN Micro-inverters v${{ steps.version.outputs.version }} published" >> "$GITHUB_STEP_SUMMARY"
+          echo "Next step: https://tools.developer.homey.app/apps -> release to **Test**, then **Submit for certification**." >> "$GITHUB_STEP_SUMMARY"
